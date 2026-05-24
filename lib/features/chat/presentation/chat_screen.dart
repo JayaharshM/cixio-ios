@@ -65,46 +65,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               state: state,
               onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
-          Expanded(
-            child: state.isLoading && state.messages.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: () {
-                      final ChatSession? session = state.activeSession;
-                      if (session == null) {
-                        return ref.read(chatProvider.notifier).initialize();
-                      }
-                      return ref
-                          .read(chatProvider.notifier)
-                          .selectSession(session);
-                    },
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
-                      itemCount: state.messages.length,
-                      itemBuilder: (context, index) {
-                        return MessageBubble(message: state.messages[index]);
+            Expanded(
+              child: state.isLoading && state.messages.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: () {
+                        final ChatSession? session = state.activeSession;
+                        if (session == null) {
+                          return ref.read(chatProvider.notifier).initialize();
+                        }
+                        return ref
+                            .read(chatProvider.notifier)
+                            .selectSession(session);
                       },
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
+                        itemCount: state.messages.length,
+                        itemBuilder: (context, index) {
+                          return MessageBubble(message: state.messages[index]);
+                        },
+                      ),
                     ),
-                  ),
-          ),
-          if (state.errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(
-                state.errorMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
             ),
-          ChatInputBar(
-            enabled: !state.isStreaming && state.activeSession != null,
-            onSubmitted: (value) {
-              ref.read(chatProvider.notifier).sendMessage(value);
-            },
-          ),
-        ],
-      ),
+            if (state.errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  state.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            ChatInputBar(
+              enabled: !state.isStreaming && state.activeSession != null,
+              onSubmitted: (value) {
+                ref.read(chatProvider.notifier).sendMessage(value);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -191,9 +191,7 @@ class _ChatDrawer extends ConsumerWidget {
                   onPressed: state.isStreaming
                       ? null
                       : () {
-                          ref
-                              .read(chatProvider.notifier)
-                              .createNewSession();
+                          ref.read(chatProvider.notifier).createNewSession();
                           Navigator.pop(context);
                         },
                   icon: const Icon(Icons.edit_outlined),
