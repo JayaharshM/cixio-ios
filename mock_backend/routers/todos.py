@@ -37,7 +37,8 @@ async def create_todo(request: CreateTodoRequest) -> Todo:
 
 
 @router.put("/{todo_id}")
-async def update_todo(todo_i, description, or due date."""
+async def update_todo(todo_id: str, request: UpdateTodoRequest) -> Todo:
+    """Update a todo's title, description, or due date."""
     todo = _todos.get(todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -46,7 +47,6 @@ async def update_todo(todo_i, description, or due date."""
         todo.title = request.title
     if request.description is not None:
         todo.description = request.description
-        todo.title = request.title
     if request.due_date is not None:
         todo.due_date = request.due_date
 

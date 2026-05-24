@@ -19,17 +19,19 @@ class TodoRepository {
 
   Future<Todo> createTodo({
     required String title,
+    String? description,
     DateTime? dueDate,
   }) {
-    return _apiService.createTodo(title: title, dueDate: dueDate);
+    return _apiService.createTodo(title: title, description: description, dueDate: dueDate);
   }
 
   Future<Todo> updateTodo({
     required String id,
     String? title,
+    String? description,
     DateTime? dueDate,
   }) {
-    return _apiService.updateTodo(id: id, title: title, dueDate: dueDate);
+    return _apiService.updateTodo(id: id, title: title, description: description, dueDate: dueDate);
   }
 
   Future<Todo> toggleTodoComplete({required String id}) {

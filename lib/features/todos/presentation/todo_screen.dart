@@ -15,18 +15,21 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
     _scrollController.dispose();
     _titleController.dispose();
+    _descriptionController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _showAddTodoDialog() {
     _titleController.clear();
+    _descriptionController.clear();
     showDialog<void>(
       context: context,
       builder: (context) {
@@ -36,21 +39,43 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
             'Add Todo',
             style: TextStyle(color: Color(0xFFE9E5F5)),
           ),
-          content: TextField(
-            controller: _titleController,
-            style: const TextStyle(color: Color(0xFFE9E5F5)),
-            decoration: InputDecoration(
-              hintText: 'Enter todo title',
-              hintStyle: const TextStyle(color: Color(0xFF6B7077)),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Color(0xFF2A2F32)),
-                borderRadius: BorderRadius.circular(8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                style: const TextStyle(color: Color(0xFFE9E5F5)),
+                decoration: InputDecoration(
+                  hintText: 'Enter todo title',
+                  hintStyle: const TextStyle(color: Color(0xFF6B7077)),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF2A2F32)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF3F484D)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Color(0xFF3F484D)),
-                borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _descriptionController,
+                style: const TextStyle(color: Color(0xFFE9E5F5)),
+                decoration: InputDecoration(
+                  hintText: 'Enter description (optional)',
+                  hintStyle: const TextStyle(color: Color(0xFF6B7077)),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF2A2F32)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Color(0xFF3F484D)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
           actions: <Widget>[
             TextButton(
@@ -65,6 +90,7 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
                 if (_titleController.text.isNotEmpty) {
                   ref.read(todoProvider.notifier).createTodo(
                         title: _titleController.text,
+                        description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
                       );
                   Navigator.pop(context);
                 }
@@ -300,13 +326,28 @@ class _TodoItem extends ConsumerWidget {
             fontSize: 14,
           ),
         ),
-        subtitle: todo.dueDate != null
-            ? Text(
-                'Due: ${_formatDate(todo.dueDate!)}',
-                style: const TextStyle(
-                  color: Color(0xFF6B7077),
-                  fontSize: 12,
-                ),
+        subtitle: (todo.description != null && todo.description!.isNotEmpty) || todo.dueDate != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (todo.description != null && todo.description!.isNotEmpty)
+                    Text(
+                      todo.description!,
+                      style: TextStyle(
+                        color: todo.completed ? const Color(0xFF6B7077) : const Color(0xFFA3A7AA),
+                        decoration: todo.completed ? TextDecoration.lineThrough : null,
+                        fontSize: 13,
+                      ),
+                    ),
+                  if (todo.dueDate != null)
+                    Text(
+                      'Due: ${_formatDate(todo.dueDate!)}',
+                      style: const TextStyle(
+                        color: Color(0xFF6B7077),
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
               )
             : null,
         trailing: IconButton(
@@ -335,6 +376,7 @@ class _TodoDrawer extends ConsumerWidget {
     final int completedCount =
         state.todos.where((todo) => todo.completed).length;
     final int totalCount = state.todos.length;
+    final int toBeDoneCount = totalCount - completedCount;
 
     return Drawer(
       backgroundColor: const Color(0xFF151819),
@@ -388,6 +430,33 @@ class _TodoDrawer extends ConsumerWidget {
                       ),
                       child: Text(
                         '$totalCount',
+                        style: const TextStyle(
+                          color: Color(0xFFD3CEE2),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.radio_button_unchecked,
+                      color: Color(0xFFE89A4B),
+                    ),
+                    title: const Text(
+                      'To Be Done',
+                      style: TextStyle(color: Color(0xFFE9E5F5)),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2F32),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '$toBeDoneCount',
                         style: const TextStyle(
                           color: Color(0xFFD3CEE2),
                           fontSize: 12,

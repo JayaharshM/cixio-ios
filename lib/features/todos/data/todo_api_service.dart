@@ -34,12 +34,14 @@ class TodoApiService {
 
   Future<Todo> createTodo({
     required String title,
+    String? description,
     DateTime? dueDate,
   }) async {
     final Response<Object?> response = await _dio.post<Object?>(
       '/todos',
       data: <String, dynamic>{
         'title': title,
+        if (description != null) 'description': description,
         if (dueDate != null) 'due_date': dueDate.toIso8601String(),
       },
     );
@@ -50,12 +52,14 @@ class TodoApiService {
   Future<Todo> updateTodo({
     required String id,
     String? title,
+    String? description,
     DateTime? dueDate,
   }) async {
     final Response<Object?> response = await _dio.put<Object?>(
       '/todos/$id',
       data: <String, dynamic>{
         if (title != null) 'title': title,
+        if (description != null) 'description': description,
         if (dueDate != null) 'due_date': dueDate.toIso8601String(),
       },
     );

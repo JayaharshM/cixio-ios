@@ -60,6 +60,7 @@ class TodoNotifier extends StateNotifier<TodoState> {
 
   Future<void> createTodo({
     required String title,
+    String? description,
     DateTime? dueDate,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -67,6 +68,7 @@ class TodoNotifier extends StateNotifier<TodoState> {
     try {
       await _repository.createTodo(
         title: title,
+        description: description,
         dueDate: dueDate,
       );
       final List<Todo> todos = await _repository.getTodos();
@@ -82,10 +84,11 @@ class TodoNotifier extends StateNotifier<TodoState> {
   Future<void> updateTodo({
     required String id,
     required String title,
+    String? description,
     DateTime? dueDate,
   }) async {
     try {
-      await _repository.updateTodo(id: id, title: title, dueDate: dueDate);
+      await _repository.updateTodo(id: id, title: title, description: description, dueDate: dueDate);
       final List<Todo> todos = await _repository.getTodos();
       state = state.copyWith(todos: todos, clearError: true);
     } catch (error) {
