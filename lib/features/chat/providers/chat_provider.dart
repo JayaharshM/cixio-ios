@@ -240,7 +240,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
       state = state.copyWith(
         isStreaming: false,
-        errorMessage: 'Message failed. Please try again.',
+        errorMessage: 'Message failed: $error',
       );
     }
   }

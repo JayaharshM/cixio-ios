@@ -30,40 +30,32 @@ class _AssistantMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _SmartHubAvatar(),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'SmartHub AI',
-                  style: TextStyle(
-                    color: Color(0xFFE8E4F4),
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 300),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF151A1B),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFF1F2528)),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _MessageContent(message: message),
-                    ),
-                  ),
-                ),
-              ],
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'SMARTHUB AI',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E2024), // Match reference bubble color
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: _MessageContent(message: message),
+              ),
             ),
           ),
         ],
@@ -243,26 +235,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   }
 }
 
-class _SmartHubAvatar extends StatelessWidget {
-  const _SmartHubAvatar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(
-        color: const Color(0xFF252937),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: const Icon(
-        Icons.smart_toy_outlined,
-        color: Color(0xFFD9D4FF),
-        size: 17,
-      ),
-    );
-  }
-}
 
 class _ContentPart {
   const _ContentPart._({

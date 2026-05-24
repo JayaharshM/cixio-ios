@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models.chat import AuthRequest, RegisterRequest
 from routers.chat import router as chat_router
 from routers.todos import router as todos_router
+from routers.documents import router as documents_router
 
 app = FastAPI(title="SmartHub Mock Backend")
 
@@ -22,6 +23,7 @@ app.add_middleware(
 
 app.include_router(chat_router)
 app.include_router(todos_router)
+app.include_router(documents_router)
 
 
 @app.get("/health")

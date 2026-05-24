@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../core/models/chat_session.dart';
 import '../providers/chat_provider.dart';
@@ -137,16 +138,16 @@ class _ChatHeader extends ConsumerWidget {
             GestureDetector(
               onTap: onMenuTap,
               child: Container(
-                width: 34,
-                height: 34,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF2B3033)),
+                  color: const Color(0xFF2A2D32), // Dark grey square
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.smart_toy_outlined,
-                  color: Color(0xFFD9D4FF),
-                  size: 19,
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
             ),
@@ -176,143 +177,228 @@ class _ChatDrawer extends ConsumerWidget {
 
   final ChatState state;
 
+  String _getMonth(int month) {
+    const List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+
+  Map<String, List<ChatSession>> _groupSessions(List<ChatSession> sessions) {
+    final Map<String, List<ChatSession>> grouped = {
+      'TODAY': [],
+      'YESTERDAY': [],
+      'LAST WEEK': [],
+    };
+
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime yesterday = today.subtract(const Duration(days: 1));
+    final DateTime lastWeek = today.subtract(const Duration(days: 7));
+
+    for (final session in sessions) {
+      final DateTime sessionDate = session.createdAt.toLocal();
+      final DateTime dateOnly = DateTime(sessionDate.year, sessionDate.month, sessionDate.day);
+
+      if (dateOnly == today) {
+        grouped['TODAY']!.add(session);
+      } else if (dateOnly == yesterday) {
+        grouped['YESTERDAY']!.add(session);
+      } else if (dateOnly.isAfter(lastWeek) || dateOnly == lastWeek) {
+        grouped['LAST WEEK']!.add(session);
+      } else {
+        // Add older to last week for now
+        grouped['LAST WEEK']!.add(session);
+      }
+    }
+
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final Map<String, List<ChatSession>> groupedSessions = _groupSessions(state.sessions);
+
     return Drawer(
       backgroundColor: const Color(0xFF151819),
       child: SafeArea(
         child: Column(
           children: <Widget>[
+            // Search + New Chat Button
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: state.isStreaming
-                      ? null
-                      : () {
-                          ref.read(chatProvider.notifier).createNewSession();
-                          Navigator.pop(context);
-                        },
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('New chat'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2A2F32),
-                    foregroundColor: const Color(0xFFE9E5F5),
-                    shape: RoundedRectangleBorder(
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search conversations...',
+                        hintStyle: const TextStyle(color: Color(0xFF6B7077)),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Color(0xFF6B7077),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2A2F32)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2A2F32)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF3F484D)),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF1E2024),
+                      ),
+                      style: const TextStyle(color: Color(0xFFE9E5F5)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.indigoAccent.shade200,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search chats',
-                  hintStyle: const TextStyle(color: Color(0xFF6B7077)),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF6B7077),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2A2F32),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2A2F32),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF3F484D),
-                    ),
-                  ),
-                ),
-                style: const TextStyle(color: Color(0xFFE9E5F5)),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Recents',
-                  style: TextStyle(
-                    color: const Color(0xFFE9E5F5),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: state.sessions.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        'No sessions yet',
-                        style: TextStyle(
-                          color: const Color(0xFF6B7077),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: state.sessions.length,
-                      itemBuilder: (context, index) {
-                        final ChatSession session = state.sessions[index];
-                        final bool isActive =
-                            state.activeSession?.id == session.id;
-
-                        return Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? const Color(0xFF2A2F32)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ListTile(
-                            title: Text(
-                              session.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFFE9E5F5),
-                                fontSize: 14,
-                              ),
-                            ),
-                            trailing: GestureDetector(
-                              onTap: () {
-                                ref
-                                    .read(chatProvider.notifier)
-                                    .deleteSession(session.id);
-                                Navigator.pop(context);
-                              },
-                              child: const Icon(
-                                Icons.more_vert,
-                                color: Color(0xFF6B7077),
-                                size: 18,
-                              ),
-                            ),
-                            onTap: () {
-                              ref
-                                  .read(chatProvider.notifier)
-                                  .selectSession(session);
+                    child: IconButton(
+                      onPressed: state.isStreaming
+                          ? null
+                          : () {
+                              ref.read(chatProvider.notifier).createNewSession();
                               Navigator.pop(context);
                             },
-                          ),
+                      icon: const Icon(Icons.add, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Sessions List
+            Expanded(
+              child: state.sessions.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'No sessions yet',
+                        style: TextStyle(color: Color(0xFF6B7077)),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: groupedSessions.entries.map((entry) {
+                        if (entry.value.isEmpty) return const SizedBox.shrink();
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16, bottom: 8),
+                              child: Text(
+                                entry.key,
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                            ...entry.value.map((session) {
+                              final bool isActive = state.activeSession?.id == session.id;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Slidable(
+                                  key: Key(session.id),
+                                  endActionPane: ActionPane(
+                                    motion: const ScrollMotion(),
+                                    extentRatio: 0.22,
+                                    children: [
+                                      CustomSlidableAction(
+                                        onPressed: (context) {
+                                          ref.read(chatProvider.notifier).deleteSession(session.id);
+                                        },
+                                        backgroundColor: Colors.transparent,
+                                        child: Container(
+                                          margin: const EdgeInsets.only(left: 8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.redAccent,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: isActive ? const Color(0xFF2A2D32) : const Color(0xFF1E2024),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: InkWell(
+                                      onTap: () {
+                                        ref.read(chatProvider.notifier).selectSession(session);
+                                        Navigator.pop(context);
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF2A2D32),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.chat_bubble_outline,
+                                              color: Colors.white70,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  session.title,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 15,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                const Text(
+                                                  'Session started...',
+                                                  style: TextStyle(
+                                                    color: Colors.white54,
+                                                    fontSize: 12,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
                         );
-                      },
+                      }).toList(),
                     ),
             ),
           ],
