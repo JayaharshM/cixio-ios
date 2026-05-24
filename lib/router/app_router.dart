@@ -1,11 +1,17 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/chat/presentation/chat_screen.dart';
+import '../screens/app/app_tab_shell.dart';
+import '../screens/app/tab_placeholder_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
-import '../screens/home_screen.dart';
 
 enum AppRoute {
   home,
+  chat,
+  docs,
+  todos,
+  profile,
   login,
   register,
 }
@@ -21,7 +27,35 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/home',
       name: AppRoute.home.name,
-      builder: (context, state) => const HomeScreen(),
+      redirect: (context, state) => '/chat',
+    ),
+    ShellRoute(
+      builder: (context, state, child) => AppTabShell(child: child),
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/chat',
+          name: AppRoute.chat.name,
+          builder: (context, state) => const ChatScreen(),
+        ),
+        GoRoute(
+          path: '/docs',
+          name: AppRoute.docs.name,
+          builder: (context, state) =>
+              const TabPlaceholderScreen(pageName: 'Docs'),
+        ),
+        GoRoute(
+          path: '/todos',
+          name: AppRoute.todos.name,
+          builder: (context, state) =>
+              const TabPlaceholderScreen(pageName: 'Todos'),
+        ),
+        GoRoute(
+          path: '/profile',
+          name: AppRoute.profile.name,
+          builder: (context, state) =>
+              const TabPlaceholderScreen(pageName: 'Profile'),
+        ),
+      ],
     ),
     GoRoute(
       path: '/register',

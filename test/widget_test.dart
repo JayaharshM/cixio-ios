@@ -8,19 +8,22 @@ void main() {
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Login'), findsWidgets);
-    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Sign in to continue'), findsOneWidget);
 
-    await tester.tap(find.text('Create a new account'));
+    await tester.ensureVisible(find.text('Sign up'));
+    await tester.tap(find.text('Sign up'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create account'), findsWidgets);
-    expect(find.text('Get started'), findsOneWidget);
+    await tester.ensureVisible(find.text('Create Account'));
+    expect(find.text('Create Account'), findsOneWidget);
+    expect(find.text('SmartHub'), findsOneWidget);
 
-    await tester.tap(find.text('Already have an account? Login'));
+    await tester.ensureVisible(find.text('Log in'));
+    await tester.tap(find.text('Log in'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Login'), findsWidgets);
-    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Sign in to continue'), findsOneWidget);
   });
 }
