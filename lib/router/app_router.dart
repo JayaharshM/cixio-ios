@@ -1,7 +1,9 @@
 import 'package:go_router/go_router.dart';
 
 import '../features/chat/presentation/chat_screen.dart';
+import '../features/todos/presentation/todo_screen.dart';
 import '../screens/app/app_tab_shell.dart';
+import '../screens/app/profile_screen.dart';
 import '../screens/app/tab_placeholder_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -46,14 +48,12 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/todos',
           name: AppRoute.todos.name,
-          builder: (context, state) =>
-              const TabPlaceholderScreen(pageName: 'Todos'),
+          builder: (context, state) => const TodoScreen(),
         ),
         GoRoute(
           path: '/profile',
           name: AppRoute.profile.name,
-          builder: (context, state) =>
-              const TabPlaceholderScreen(pageName: 'Profile'),
+          builder: (context, state) => const ProfileScreen(),
         ),
       ],
     ),
