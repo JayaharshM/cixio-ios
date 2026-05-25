@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../features/chat/providers/chat_provider.dart';
 import '../../shared/providers/tab_navigation_provider.dart';
 import '../../shared/widgets/floating_glass_nav_bar.dart';
@@ -16,6 +17,7 @@ class AppTabShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppColors c = AppColors.of(context);
     final String path = GoRouterState.of(context).uri.path;
     final int routeIndex = _indexForPath(path);
     final int selectedIndex = ref.watch(selectedTabIndexProvider);
@@ -35,7 +37,7 @@ class AppTabShell extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF101415),
+      backgroundColor: c.scaffoldBg,
       body: child,
       bottomNavigationBar: hideNavBar ? null : const FloatingGlassNavBar(),
     );

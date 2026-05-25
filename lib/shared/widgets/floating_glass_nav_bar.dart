@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../router/app_router.dart';
 import '../providers/tab_navigation_provider.dart';
 
@@ -74,8 +75,8 @@ class _NavBarItemButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color foregroundColor =
-        isSelected ? const Color(0xFFF1EEFF) : const Color(0xFFC0BDCB);
+    final AppColors c = AppColors.of(context);
+    final Color foregroundColor = isSelected ? c.navSelected : c.navUnselected;
 
     return Semantics(
       button: true,
@@ -98,9 +99,7 @@ class _NavBarItemButton extends StatelessWidget {
                   width: isSelected ? 52 : 38,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF342A66)
-                        : Colors.transparent,
+                    color: isSelected ? c.navActiveBg : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(item.icon, color: foregroundColor, size: 23),

@@ -3,7 +3,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from models.chat import AuthRequest, RegisterRequest
@@ -52,6 +52,27 @@ async def login(request: AuthRequest) -> dict[str, object]:
             "id": str(uuid.uuid4()),
             "email": request.email,
         },
+    }
+
+
+@app.get("/auth/me")
+async def get_me(request: Request) -> dict[str, object]:
+    auth = request.headers.get("Authorization", "")
+    email = "alex.mercer@smarthub.io"
+    if auth.startswith("Bearer "):
+        token = auth.split(" ")[1]
+        try:
+            payload_b64 = token.split(".")[1]
+            payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+            payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode())
+            if "email" in payload:
+                email = payload["email"]
+        except Exception:
+            pass
+    return {
+        "id": str(uuid.uuid4()),
+        "name": email.split("@")[0].replace(".", " ").title(),
+        "email": email,
     }
 
 

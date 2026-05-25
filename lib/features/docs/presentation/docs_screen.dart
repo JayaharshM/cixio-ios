@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/models/document.dart';
+import '../../../core/theme/app_colors.dart';
 import 'docs_provider.dart';
 
 class DocsScreen extends ConsumerStatefulWidget {
@@ -26,58 +27,67 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
       final String filePath = result.files.single.path!;
       final String fileName = result.files.single.name;
       await ref.read(docsProvider.notifier).uploadDocument(filePath, fileName);
+      if (mounted) {
+        Navigator.pop(context); // Close the bottom sheet after picking a file
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final AsyncValue<List<Document>> docsState = ref.watch(docsProvider);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF121418), // Dark background matching design
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+  void _showAddDocSheet(BuildContext context, AppColors c) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: c.dialogBg,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-
-              const Text(
-                'Smart Documents',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Upload, manage, and interact with your files securely. AI processing is automatically enabled for supported formats.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Add Document',
+                    style: TextStyle(
+                      color: c.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: c.textMuted),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               // Storage Section
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E2024),
+                  color: c.cardBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
                         Text(
                           'STORAGE',
                           style: TextStyle(
-                            color: Colors.white54,
+                            color: c.textMuted,
                             fontSize: 12,
                             letterSpacing: 1.2,
                             fontWeight: FontWeight.w600,
@@ -86,7 +96,7 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                         Text(
                           '45% used',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: c.textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -96,22 +106,17 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                     const SizedBox(height: 12),
                     LinearProgressIndicator(
                       value: 0.45,
-                      backgroundColor: Colors.white10,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.indigoAccent.shade200,
-                      ),
+                      backgroundColor: c.surfaceDim.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(c.accent),
                       minHeight: 8,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     const SizedBox(height: 8),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerRight,
                       child: Text(
                         '4.5 GB of 10 GB',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: c.textMuted, fontSize: 12),
                       ),
                     ),
                   ],
@@ -122,50 +127,44 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E2024),
+                  color: c.cardBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white10,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: c.border, width: 1.5),
                 ),
                 child: Column(
                   children: <Widget>[
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2A2D32),
+                      decoration: BoxDecoration(
+                        color: c.surfaceDim,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.cloud_upload_outlined,
-                        color: Colors.white,
+                        color: c.textPrimary,
                         size: 32,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Drag & Drop files here',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: c.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Support for PDF, DOCX, TXT, and CSV. Max file size: 50MB.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: c.textMuted, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _pickFile,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigoAccent.shade200,
+                        backgroundColor: c.accent,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -180,19 +179,66 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                   ],
                 ),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppColors c = AppColors.of(context);
+    final AsyncValue<List<Document>> docsState = ref.watch(docsProvider);
+
+    return Scaffold(
+      backgroundColor: c.scaffoldBg,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 24.0),
+        child: FloatingActionButton(
+          onPressed: () => _showAddDocSheet(context, c),
+          backgroundColor: c.accent,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Smart Documents',
+                style: TextStyle(
+                  color: c.textPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Upload, manage, and interact with your files securely. AI processing is automatically enabled for supported formats.',
+                style: TextStyle(
+                  color: c.textSecondary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
               const SizedBox(height: 32),
               // Recent Uploads Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  const Row(
+                  Row(
                     children: <Widget>[
-                      Icon(Icons.folder_outlined, color: Colors.white, size: 24),
-                      SizedBox(width: 8),
+                      Icon(Icons.folder_outlined, color: c.textPrimary, size: 24),
+                      const SizedBox(width: 8),
                       Text(
                         'Recent Uploads',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: c.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -205,14 +251,14 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                         onPressed: () => setState(() => _isListMode = false),
                         icon: Icon(
                           Icons.grid_view,
-                          color: !_isListMode ? Colors.white : Colors.white54,
+                          color: !_isListMode ? c.textPrimary : c.textMuted,
                         ),
                       ),
                       IconButton(
                         onPressed: () => setState(() => _isListMode = true),
                         icon: Icon(
                           Icons.view_list,
-                          color: _isListMode ? Colors.white : Colors.white54,
+                          color: _isListMode ? c.textPrimary : c.textMuted,
                         ),
                       ),
                     ],
@@ -224,10 +270,13 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
               docsState.when(
                 data: (List<Document> docs) {
                   if (docs.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No documents uploaded yet.',
-                        style: TextStyle(color: Colors.white54),
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 40.0),
+                        child: Text(
+                          'No documents uploaded yet.',
+                          style: TextStyle(color: c.textMuted),
+                        ),
                       ),
                     );
                   }
@@ -238,7 +287,7 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final Document doc = docs[index];
-                        return _buildListTile(doc);
+                        return _buildListTile(doc, c);
                       },
                     );
                   } else {
@@ -254,18 +303,24 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final Document doc = docs[index];
-                        return _buildGridTile(doc);
+                        return _buildGridTile(doc, c);
                       },
                     );
                   }
                 },
                 loading: () => const Center(
-                  child: CircularProgressIndicator(),
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 40.0),
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
                 error: (error, _) => Center(
-                  child: Text(
-                    'Error loading documents: $error',
-                    style: const TextStyle(color: Colors.redAccent),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 40.0),
+                    child: Text(
+                      'Error loading documents: $error',
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
                   ),
                 ),
               ),
@@ -276,22 +331,22 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
     );
   }
 
-  Widget _buildListTile(Document doc) {
+  Widget _buildListTile(Document doc, AppColors c) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E2024),
+        color: c.cardBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: const Icon(Icons.insert_drive_file, color: Colors.indigoAccent),
+        leading: Icon(Icons.insert_drive_file, color: c.accent),
         title: Text(
           doc.name,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: c.textPrimary),
         ),
         subtitle: Text(
           '${(doc.size / 1024).toStringAsFixed(1)} KB • ${DateFormat.yMMMd().format(doc.uploadedAt)}',
-          style: const TextStyle(color: Colors.white54),
+          style: TextStyle(color: c.textMuted),
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
@@ -303,11 +358,11 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
     );
   }
 
-  Widget _buildGridTile(Document doc) {
+  Widget _buildGridTile(Document doc, AppColors c) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E2024),
+        color: c.cardBg,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -316,7 +371,7 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Icon(Icons.insert_drive_file, color: Colors.indigoAccent, size: 32),
+              Icon(Icons.insert_drive_file, color: c.accent, size: 32),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                 onPressed: () {
@@ -328,14 +383,14 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
           const Spacer(),
           Text(
             doc.name,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.bold),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             '${(doc.size / 1024).toStringAsFixed(1)} KB',
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: c.textMuted, fontSize: 12),
           ),
         ],
       ),

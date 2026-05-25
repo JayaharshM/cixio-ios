@@ -1,26 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../router/app_router.dart';
+import '../../shared/providers/theme_provider.dart';
+import '../auth/auth_api.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  bool _darkMode = true;
-
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _logout(BuildContext context) {
     context.goNamed(AppRoute.login.name);
   }
 
   @override
   Widget build(BuildContext context) {
+    final ThemeMode currentMode = ref.watch(themeModeProvider);
+    final bool isDark = currentMode == ThemeMode.dark;
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+
+    // Adaptive colours derived from theme
+    final Color scaffoldBg = dark ? const Color(0xFF101415) : const Color(0xFFF0F2F5);
+    final Color cardBg = dark ? const Color(0xFF161A1D) : Colors.white;
+    final Color iconBg = dark ? const Color(0xFF1E2327) : const Color(0xFFEEEFF3);
+    final Color titleColor = dark ? const Color(0xFFEAE6F5) : const Color(0xFF1A1A2E);
+    final Color subtitleColor = dark ? const Color(0xFF7A7A8A) : const Color(0xFF8A8A9A);
+    final Color sectionColor = dark ? const Color(0xFF6B7077) : const Color(0xFF9A9AAA);
+    final Color iconColor = dark ? const Color(0xFFD3CEE2) : const Color(0xFF5B5B7A);
+    final Color chevronColor = dark ? const Color(0xFF4A4F55) : const Color(0xFFBBBBC8);
+    final Color dividerColor = dark ? const Color(0xFF1E2327) : const Color(0xFFEEEEF5);
+    final Color logoutBg = dark ? const Color(0xFF161A1D) : Colors.white;
+    final Color logoutBorder = dark ? const Color(0xFF2A2F32) : const Color(0xFFDDDDE8);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF101415),
+      backgroundColor: scaffoldBg,
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -38,13 +57,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFF3B3A5C),
+                        color: cs.primary.withValues(alpha: 0.4),
                         width: 2.5,
                       ),
                       image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://i.pravatar.cc/200?img=47',
-                        ),
+                        image: NetworkImage('https://i.pravatar.cc/200?img=47'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -56,94 +73,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: BoxShape.circle,
                       color: Colors.indigoAccent.shade200,
                     ),
-                    child: const Icon(
-                      Icons.edit,
-                      size: 14,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.edit, size: 14, color: Colors.white),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Alex Mercer',
-                style: TextStyle(
-                  color: Color(0xFFEAE6F5),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+              ref.watch(userProvider).when(
+                data: (user) => Column(
+                  children: [
+                    Text(
+                      user['name'] ?? 'User',
+                      style: TextStyle(
+                        color: titleColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user['email'] ?? '',
+                      style: TextStyle(color: subtitleColor, fontSize: 13),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'alex.mercer@smarthub.io',
-                style: TextStyle(
-                  color: Color(0xFF7A7A8A),
-                  fontSize: 13,
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: CircularProgressIndicator(),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _Badge(label: 'Pro Plan', color: const Color(0xFF2D2B4E)),
-                  const SizedBox(width: 8),
-                  _Badge(label: 'Admin', color: const Color(0xFF1E2A2E)),
-                ],
+                error: (err, stack) => Text(
+                  'Error loading profile',
+                  style: TextStyle(color: subtitleColor, fontSize: 13),
+                ),
               ),
               const SizedBox(height: 32),
 
               // ── Account Settings ────────────────────────────────
-              _SectionHeader(label: 'ACCOUNT SETTINGS'),
+              _SectionHeader(label: 'ACCOUNT SETTINGS', color: sectionColor),
               _SettingsCard(
+                bgColor: cardBg,
                 children: [
                   _SettingsTile(
                     icon: Icons.person_outline,
                     title: 'Personal Information',
                     subtitle: 'Name, email, phone number',
+                    iconBg: iconBg,
+                    iconColor: iconColor,
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    chevronColor: chevronColor,
                   ),
-                  _Divider(),
+                  _AdaptiveDivider(color: dividerColor),
                   _SettingsTile(
                     icon: Icons.credit_card_outlined,
                     title: 'Billing & Subscription',
                     subtitle: 'Manage Pro Plan features',
+                    iconBg: iconBg,
+                    iconColor: iconColor,
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    chevronColor: chevronColor,
                   ),
                 ],
               ),
 
               // ── Security ────────────────────────────────────────
-              _SectionHeader(label: 'SECURITY'),
+              _SectionHeader(label: 'SECURITY', color: sectionColor),
               _SettingsCard(
+                bgColor: cardBg,
                 children: [
                   _SettingsTile(
                     icon: Icons.lock_outline,
                     title: 'Password & Security',
                     subtitle: 'Update password, 2FA',
+                    iconBg: iconBg,
+                    iconColor: iconColor,
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    chevronColor: chevronColor,
                   ),
-                  _Divider(),
+                  _AdaptiveDivider(color: dividerColor),
                   _SettingsTile(
                     icon: Icons.devices_outlined,
                     title: 'Active Sessions',
                     subtitle: 'Manage logged in devices',
+                    iconBg: iconBg,
+                    iconColor: iconColor,
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    chevronColor: chevronColor,
                   ),
                 ],
               ),
 
               // ── App Preferences ─────────────────────────────────
-              _SectionHeader(label: 'APP PREFERENCES'),
+              _SectionHeader(label: 'APP PREFERENCES', color: sectionColor),
               _SettingsCard(
+                bgColor: cardBg,
                 children: [
                   _ToggleTile(
                     icon: Icons.dark_mode_outlined,
                     title: 'Dark Mode',
                     subtitle: 'Toggle app appearance',
-                    value: _darkMode,
-                    onChanged: (v) => setState(() => _darkMode = v),
+                    value: isDark,
+                    iconBg: iconBg,
+                    iconColor: iconColor,
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    onChanged: (v) {
+                      ref.read(themeModeProvider.notifier).setThemeMode(
+                          v ? ThemeMode.dark : ThemeMode.light);
+                    },
                   ),
-                  _Divider(),
+                  _AdaptiveDivider(color: dividerColor),
                   _SettingsTile(
                     icon: Icons.notifications_outlined,
                     title: 'Notifications',
                     subtitle: 'Email and push alerts',
+                    iconBg: iconBg,
+                    iconColor: iconColor,
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    chevronColor: chevronColor,
                   ),
                 ],
               ),
@@ -158,11 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 52,
                   child: OutlinedButton.icon(
                     onPressed: () => _logout(context),
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Color(0xFFE84B4B),
-                      size: 20,
-                    ),
+                    icon: const Icon(Icons.logout, color: Color(0xFFE84B4B), size: 20),
                     label: const Text(
                       'Logout',
                       style: TextStyle(
@@ -172,8 +218,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF2A2F32)),
-                      backgroundColor: const Color(0xFF161A1D),
+                      side: BorderSide(color: logoutBorder),
+                      backgroundColor: logoutBg,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -192,34 +238,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label, required this.color});
   final String label;
   final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFFD3CEE2),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
-  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -229,8 +251,8 @@ class _SectionHeader extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF6B7077),
+          style: TextStyle(
+            color: color,
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
@@ -242,16 +264,24 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.children});
+  const _SettingsCard({required this.children, required this.bgColor});
   final List<Widget> children;
+  final Color bgColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF161A1D),
+        color: bgColor,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(children: children),
     );
@@ -263,10 +293,20 @@ class _SettingsTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.iconBg,
+    required this.iconColor,
+    required this.titleColor,
+    required this.subtitleColor,
+    required this.chevronColor,
   });
   final IconData icon;
   final String title;
   final String subtitle;
+  final Color iconBg;
+  final Color iconColor;
+  final Color titleColor;
+  final Color subtitleColor;
+  final Color chevronColor;
 
   @override
   Widget build(BuildContext context) {
@@ -277,41 +317,22 @@ class _SettingsTile extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E2327),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: const Color(0xFFD3CEE2), size: 20),
+            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFFE9E5F5),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(title,
+                    style: TextStyle(color: titleColor, fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7077),
-                    fontSize: 12,
-                  ),
-                ),
+                Text(subtitle, style: TextStyle(color: subtitleColor, fontSize: 12)),
               ],
             ),
           ),
-          const Icon(
-            Icons.chevron_right,
-            color: Color(0xFF4A4F55),
-            size: 20,
-          ),
+          Icon(Icons.chevron_right, color: chevronColor, size: 20),
         ],
       ),
     );
@@ -325,12 +346,20 @@ class _ToggleTile extends StatelessWidget {
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    required this.iconBg,
+    required this.iconColor,
+    required this.titleColor,
+    required this.subtitleColor,
   });
   final IconData icon;
   final String title;
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final Color iconBg;
+  final Color iconColor;
+  final Color titleColor;
+  final Color subtitleColor;
 
   @override
   Widget build(BuildContext context) {
@@ -341,33 +370,18 @@ class _ToggleTile extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E2327),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: const Color(0xFFD3CEE2), size: 20),
+            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFFE9E5F5),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(title,
+                    style: TextStyle(color: titleColor, fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7077),
-                    fontSize: 12,
-                  ),
-                ),
+                Text(subtitle, style: TextStyle(color: subtitleColor, fontSize: 12)),
               ],
             ),
           ),
@@ -386,13 +400,12 @@ class _ToggleTile extends StatelessWidget {
   }
 }
 
-class _Divider extends StatelessWidget {
+class _AdaptiveDivider extends StatelessWidget {
+  const _AdaptiveDivider({required this.color});
+  final Color color;
+
   @override
   Widget build(BuildContext context) {
-    return const Divider(
-      color: Color(0xFF1E2327),
-      height: 1,
-      indent: 70,
-    );
+    return Divider(color: color, height: 1, indent: 70);
   }
 }

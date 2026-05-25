@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/chat_session.dart';
@@ -241,9 +242,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
           isStreaming: false,
         ),
       );
+      String errorMsg = 'Message failed to send.';
+      if (error is DioException) {
+        if (error.response?.statusCode == 404) {
+          errorMsg = 'Session not found. Please start a new chat session.';
+        } else {
+          errorMsg = 'Network error: ${error.message}';
+        }
+      }
+
       state = state.copyWith(
         isStreaming: false,
-        errorMessage: 'Message failed: $error',
+        errorMessage: errorMsg,
       );
     }
   }

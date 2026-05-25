@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../core/models/chat_session.dart';
+import '../../../core/theme/app_colors.dart';
 import '../providers/chat_provider.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/message_bubble.dart';
@@ -68,7 +69,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF101415),
+      backgroundColor: AppColors.of(context).scaffoldBg,
+      floatingActionButton: state.activeSession == null
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 24.0),
+              child: FloatingActionButton(
+                onPressed: state.isStreaming
+                    ? null
+                    : () {
+                        ref.read(chatProvider.notifier).createNewSession();
+                      },
+                backgroundColor: Colors.indigoAccent.shade200,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
+            )
+          : null,
       body: Column(
         children: <Widget>[
           _ChatHeader(
@@ -156,7 +172,7 @@ class _ChatHeader extends ConsumerWidget {
   final TextEditingController searchController;
   final VoidCallback onSearchToggle;
 
-  Widget _buildFloatingButton({
+  Widget _buildFloatingButton(BuildContext context, {
     required IconData icon,
     required VoidCallback? onTap,
     Color? color,
@@ -165,7 +181,7 @@ class _ChatHeader extends ConsumerWidget {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: color ?? const Color(0xFF2A2D32),
+        color: color ?? AppColors.of(context).surfaceDim,
         shape: BoxShape.circle,
         boxShadow: <BoxShadow>[
           BoxShadow(
@@ -181,9 +197,8 @@ class _ChatHeader extends ConsumerWidget {
           customBorder: const CircleBorder(),
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
           onTap: onTap,
-          child: Icon(icon, color: Colors.white, size: 24),
+          child: Icon(icon, color: AppColors.of(context).textPrimary, size: 24),
         ),
       ),
     );
@@ -199,7 +214,7 @@ class _ChatHeader extends ConsumerWidget {
         child: isSearching && state.activeSession == null
             ? Row(
                 children: [
-                  _buildFloatingButton(
+                  _buildFloatingButton(context,
                     icon: Icons.arrow_back,
                     onTap: onSearchToggle,
                   ),
@@ -208,18 +223,24 @@ class _ChatHeader extends ConsumerWidget {
                     child: Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2A2D32),
+                        color: AppColors.of(context).surfaceDim,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: TextField(
                         controller: searchController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: TextStyle(color: AppColors.of(context).textPrimary, fontSize: 14),
                         autofocus: true,
-                        decoration: const InputDecoration(
+                        textAlignVertical: TextAlignVertical.center,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           hintText: 'Search chats...',
-                          hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
+                          hintStyle: TextStyle(color: AppColors.of(context).textMuted, fontSize: 14),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
                         ),
                       ),
                     ),
@@ -229,7 +250,7 @@ class _ChatHeader extends ConsumerWidget {
             : Row(
                 children: <Widget>[
                   if (state.activeSession != null) ...[
-              _buildFloatingButton(
+              _buildFloatingButton(context,
                 icon: Icons.arrow_back,
                 onTap: onBackTap,
               ),
@@ -246,7 +267,7 @@ class _ChatHeader extends ConsumerWidget {
                   ),
                   child: PopupMenuButton<bool>(
                     offset: const Offset(0, 40),
-                    color: const Color(0xFF2A2D32),
+                    color: AppColors.of(context).elevatedCardBg,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -265,7 +286,7 @@ class _ChatHeader extends ConsumerWidget {
                             size: 18,
                           ),
                           const SizedBox(width: 8),
-                          const Text('RAG On', style: TextStyle(color: Colors.white)),
+                          Text('RAG On', style: TextStyle(color: AppColors.of(context).textPrimary)),
                         ],
                       ),
                     ),
@@ -279,7 +300,7 @@ class _ChatHeader extends ConsumerWidget {
                             size: 18,
                           ),
                           const SizedBox(width: 8),
-                          const Text('RAG Off', style: TextStyle(color: Colors.white)),
+                          Text('RAG Off', style: TextStyle(color: AppColors.of(context).textPrimary)),
                         ],
                       ),
                     ),
@@ -287,17 +308,17 @@ class _ChatHeader extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'SmartHub',
                         style: TextStyle(
-                          color: Color(0xFFE9E5F5),
+                          color: AppColors.of(context).textPrimary,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withValues(alpha: 0.5), size: 24),
+                      Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.of(context).icon, size: 24),
                     ],
                   ),
                 ), // Close PopupMenuButton
@@ -305,19 +326,9 @@ class _ChatHeader extends ConsumerWidget {
               ), // Close Align
             ), // Close Expanded
             if (state.activeSession == null) ...[
-              _buildFloatingButton(
+              _buildFloatingButton(context,
                 icon: Icons.search,
                 onTap: onSearchToggle,
-              ),
-              const SizedBox(width: 12),
-              _buildFloatingButton(
-                icon: Icons.add,
-                color: Colors.indigoAccent.shade200,
-                onTap: state.isStreaming
-                    ? null
-                    : () {
-                        ref.read(chatProvider.notifier).createNewSession();
-                      },
               ),
             ],
           ],
@@ -402,8 +413,8 @@ class _ChatSessionsList extends ConsumerWidget {
                               padding: const EdgeInsets.only(top: 16, bottom: 8),
                               child: Text(
                                 entry.key,
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: AppColors.of(context).textMuted,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.2,
@@ -467,7 +478,7 @@ class _ChatSessionsList extends ConsumerWidget {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                                     decoration: BoxDecoration(
-                                      color: isActive ? const Color(0xFF2A2D32) : const Color(0xFF1E2024),
+                                      color: isActive ? AppColors.of(context).surfaceDim : AppColors.of(context).cardBg,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: InkWell(
@@ -480,12 +491,12 @@ class _ChatSessionsList extends ConsumerWidget {
                                             width: 40,
                                             height: 40,
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF2A2D32),
+                                              color: AppColors.of(context).surfaceDim,
                                               borderRadius: BorderRadius.circular(8),
                                             ),
-                                            child: const Icon(
+                                            child: Icon(
                                               Icons.chat_bubble_outline,
-                                              color: Colors.white70,
+                                              color: AppColors.of(context).icon,
                                               size: 20,
                                             ),
                                           ),
@@ -496,8 +507,8 @@ class _ChatSessionsList extends ConsumerWidget {
                                               children: [
                                                 Text(
                                                   session.title,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
+                                                  style: TextStyle(
+                                                    color: AppColors.of(context).textPrimary,
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 15,
                                                   ),
@@ -505,10 +516,10 @@ class _ChatSessionsList extends ConsumerWidget {
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
                                                 const SizedBox(height: 4),
-                                                const Text(
+                                                Text(
                                                   'Session started...',
                                                   style: TextStyle(
-                                                    color: Colors.white54,
+                                                    color: AppColors.of(context).textMuted,
                                                     fontSize: 12,
                                                   ),
                                                   maxLines: 1,

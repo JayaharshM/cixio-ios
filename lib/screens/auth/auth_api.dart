@@ -11,6 +11,10 @@ final Provider<AuthApi> authApiProvider = Provider<AuthApi>((ref) {
   );
 });
 
+final FutureProvider<Map<String, dynamic>> userProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  return ref.read(authApiProvider).getUser();
+});
+
 class AuthApi {
   const AuthApi({
     required Dio dio,
@@ -80,6 +84,11 @@ class AuthApi {
         value: refreshToken,
       );
     }
+  }
+
+  Future<Map<String, dynamic>> getUser() async {
+    final Response<Map<String, dynamic>> response = await _dio.get<Map<String, dynamic>>('/auth/me');
+    return response.data ?? <String, dynamic>{};
   }
 
   String? _readToken(

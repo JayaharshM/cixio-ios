@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/document.dart';
 import '../data/doc_repository.dart';
 
-final AutoDisposeAsyncNotifierProvider<DocsNotifier, List<Document>>
+final AsyncNotifierProvider<DocsNotifier, List<Document>>
     docsProvider =
-    AutoDisposeAsyncNotifierProvider<DocsNotifier, List<Document>>(
+    AsyncNotifierProvider<DocsNotifier, List<Document>>(
         DocsNotifier.new);
 
-class DocsNotifier extends AutoDisposeAsyncNotifier<List<Document>> {
+class DocsNotifier extends AsyncNotifier<List<Document>> {
   @override
   Future<List<Document>> build() async {
     return ref.watch(docRepositoryProvider).getDocuments();

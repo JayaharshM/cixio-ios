@@ -139,7 +139,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const <String>[AutofillHints.email],
                     style: const TextStyle(color: Color(0xFF161822)),
-                    decoration: _loginInputDecoration('Email Address'),
+                    decoration: _loginInputDecoration(
+                      'Email Address',
+                      prefixIcon: const Icon(Icons.email_outlined),
+                    ),
                     validator: (value) {
                       final String email = value?.trim() ?? '';
                       if (email.isEmpty) {
@@ -160,6 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: const TextStyle(color: Color(0xFF161822)),
                     decoration: _loginInputDecoration(
                       'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         tooltip: _obscurePassword
                             ? 'Show password'
@@ -263,6 +267,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   InputDecoration _loginInputDecoration(
     String hintText, {
+    Widget? prefixIcon,
     Widget? suffixIcon,
   }) {
     return InputDecoration(
@@ -271,19 +276,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       fillColor: const Color(0xFFF8F8FA),
       hintStyle: const TextStyle(color: Color(0xFF9995AA)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+      prefixIcon: prefixIcon,
+      prefixIconColor: const Color(0xFFAAA5BA),
       suffixIcon: suffixIcon,
       suffixIconColor: const Color(0xFFAAA5BA),
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: Color(0xFFD8D5E0)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFD8D5E0)),
       ),
-      enabledBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: Color(0xFFD8D5E0)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFD8D5E0)),
       ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: authPrimaryColor, width: 1.4),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: authPrimaryColor, width: 1.4),
       ),
     );
   }

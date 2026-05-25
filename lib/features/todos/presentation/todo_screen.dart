@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../core/models/todo.dart';
+import '../../../core/theme/app_colors.dart';
 import '../providers/todo_provider.dart';
 
 class TodoScreen extends ConsumerStatefulWidget {
@@ -43,27 +44,28 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
     showDialog<void>(
       context: context,
       builder: (context) {
+        final AppColors c = AppColors.of(context);
         return AlertDialog(
-          backgroundColor: const Color(0xFF1A1F21),
-          title: const Text(
+          backgroundColor: c.dialogBg,
+          title: Text(
             'Add Todo',
-            style: TextStyle(color: Color(0xFFE9E5F5)),
+            style: TextStyle(color: c.textPrimary),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _titleController,
-                style: const TextStyle(color: Color(0xFFE9E5F5)),
+                style: TextStyle(color: c.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Enter todo title',
-                  hintStyle: const TextStyle(color: Color(0xFF6B7077)),
+                  hintStyle: TextStyle(color: c.textMuted),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: Color(0xFF2A2F32)),
+                    borderSide: BorderSide(color: c.border),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: Color(0xFF3F484D)),
+                    borderSide: BorderSide(color: c.accent),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -71,16 +73,16 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _descriptionController,
-                style: const TextStyle(color: Color(0xFFE9E5F5)),
+                style: TextStyle(color: c.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Enter description (optional)',
-                  hintStyle: const TextStyle(color: Color(0xFF6B7077)),
+                  hintStyle: TextStyle(color: c.textMuted),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: Color(0xFF2A2F32)),
+                    borderSide: BorderSide(color: c.border),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: Color(0xFF3F484D)),
+                    borderSide: BorderSide(color: c.accent),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -90,9 +92,9 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Color(0xFFD3CEE2)),
+                style: TextStyle(color: c.icon),
               ),
             ),
             TextButton(
@@ -105,9 +107,9 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
                   Navigator.pop(context);
                 }
               },
-              child: const Text(
+              child: Text(
                 'Add',
-                style: TextStyle(color: Color(0xFFD9D4FF)),
+                style: TextStyle(color: c.accent),
               ),
             ),
           ],
@@ -118,6 +120,7 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final AppColors c = AppColors.of(context);
     final TodoState state = ref.watch(todoProvider);
     final List<Todo> filteredTodos = _searchController.text.isEmpty
         ? state.todos
@@ -129,8 +132,8 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF101415),
-      drawer: _TodoDrawer(),
+      backgroundColor: c.scaffoldBg,
+      drawer: const _TodoDrawer(),
       body: Column(
           children: <Widget>[
             _TodoHeader(
@@ -167,9 +170,7 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyLarge
-                                          ?.copyWith(
-                                            color: const Color(0xFF6B7077),
-                                          ),
+                                          ?.copyWith(color: c.textMuted),
                                     ),
                                   ),
                                 ),
@@ -211,12 +212,14 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
               ),
           ],
         ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTodoDialog,
-        backgroundColor: const Color(0xFFD9D4FF),
-        child: const Icon(
-          Icons.add,
-          color: Color(0xFF101415),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 24.0),
+        child: FloatingActionButton(
+          onPressed: _showAddTodoDialog,
+          backgroundColor: c.accent,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
     );
@@ -238,16 +241,17 @@ class _TodoHeader extends StatelessWidget {
   final VoidCallback onSearchToggle;
   final ValueChanged<String>? onSearchChanged;
 
-  Widget _buildFloatingButton({
+  Widget _buildFloatingButton(BuildContext context, {
     required IconData icon,
     required VoidCallback? onTap,
     Color? color,
   }) {
+    final AppColors c = AppColors.of(context);
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: color ?? const Color(0xFF2A2D32),
+        color: color ?? c.surfaceDim,
         shape: BoxShape.circle,
         boxShadow: <BoxShadow>[
           BoxShadow(
@@ -265,7 +269,7 @@ class _TodoHeader extends StatelessWidget {
           highlightColor: Colors.transparent,
           hoverColor: Colors.transparent,
           onTap: onTap,
-          child: Icon(icon, color: Colors.white, size: 24),
+          child: Icon(icon, color: c.textPrimary, size: 24),
         ),
       ),
     );
@@ -273,6 +277,7 @@ class _TodoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppColors c = AppColors.of(context);
     return SafeArea(
       bottom: false,
       child: Container(
@@ -281,7 +286,7 @@ class _TodoHeader extends StatelessWidget {
         child: isSearching
             ? Row(
                 children: [
-                  _buildFloatingButton(
+                  _buildFloatingButton(context,
                     icon: Icons.arrow_back,
                     onTap: onSearchToggle,
                   ),
@@ -290,19 +295,25 @@ class _TodoHeader extends StatelessWidget {
                     child: Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2A2D32),
+                        color: c.surfaceDim,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: TextField(
                         controller: searchController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: TextStyle(color: c.textPrimary, fontSize: 14),
                         autofocus: true,
                         onChanged: onSearchChanged,
-                        decoration: const InputDecoration(
+                        textAlignVertical: TextAlignVertical.center,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           hintText: 'Search todos...',
-                          hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
+                          hintStyle: TextStyle(color: c.textMuted, fontSize: 14),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
                         ),
                       ),
                     ),
@@ -318,30 +329,30 @@ class _TodoHeader extends StatelessWidget {
                       height: 34,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF2B3033)),
+                        border: Border.all(color: c.border),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.checklist_outlined,
-                        color: Color(0xFFD9D4FF),
+                        color: c.accent,
                         size: 19,
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'My Todos',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Color(0xFFE9E5F5),
+                        color: c.textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
                   ),
-                  _buildFloatingButton(
+                  _buildFloatingButton(context,
                     icon: Icons.search,
                     onTap: onSearchToggle,
                   ),
@@ -359,6 +370,7 @@ class _TodoItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppColors c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Slidable(
@@ -375,7 +387,7 @@ class _TodoItem extends ConsumerWidget {
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
-                  color: todo.isPinned ? const Color(0xFF6B7077) : Colors.indigoAccent.shade200,
+                  color: todo.isPinned ? c.textMuted : c.accent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -414,7 +426,7 @@ class _TodoItem extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
-            color: todo.completed ? const Color(0xFF0F1213) : const Color(0xFF1E2024),
+            color: todo.completed ? c.todoItemDoneBg : c.todoItemBg,
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
@@ -425,15 +437,13 @@ class _TodoItem extends ConsumerWidget {
                 ref.read(todoProvider.notifier).toggleTodoComplete(id: todo.id);
               },
               fillColor: WidgetStateProperty.all(
-                todo.completed ? const Color(0xFF4CAF50) : const Color(0xFF2A2F32),
+                todo.completed ? const Color(0xFF4CAF50) : c.checkboxFill,
               ),
             ),
             title: Text(
               todo.title,
               style: TextStyle(
-                color: todo.completed
-                    ? const Color(0xFF6B7077)
-                    : const Color(0xFFE9E5F5),
+                color: todo.completed ? c.textMuted : c.textPrimary,
                 decoration: todo.completed ? TextDecoration.lineThrough : null,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -450,7 +460,7 @@ class _TodoItem extends ConsumerWidget {
                         Text(
                           todo.description!,
                           style: TextStyle(
-                            color: todo.completed ? const Color(0xFF6B7077) : const Color(0xFFA3A7AA),
+                            color: todo.completed ? c.textMuted : c.textSecondary,
                             decoration: todo.completed ? TextDecoration.lineThrough : null,
                             fontSize: 13,
                           ),
@@ -460,8 +470,8 @@ class _TodoItem extends ConsumerWidget {
                       if (todo.dueDate != null)
                         Text(
                           'Due: ${_formatDate(todo.dueDate!)}',
-                          style: const TextStyle(
-                            color: Color(0xFF6B7077),
+                          style: TextStyle(
+                            color: c.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -471,7 +481,7 @@ class _TodoItem extends ConsumerWidget {
             trailing: todo.isPinned
                 ? Icon(
                     Icons.push_pin,
-                    color: Colors.indigoAccent.shade200,
+                    color: c.accent,
                     size: 20,
                   )
                 : null,
@@ -487,8 +497,11 @@ class _TodoItem extends ConsumerWidget {
 }
 
 class _TodoDrawer extends ConsumerWidget {
+  const _TodoDrawer();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppColors c = AppColors.of(context);
     final TodoState state = ref.watch(todoProvider);
     final int completedCount =
         state.todos.where((todo) => todo.completed).length;
@@ -496,7 +509,7 @@ class _TodoDrawer extends ConsumerWidget {
     final int toBeDoneCount = totalCount - completedCount;
 
     return Drawer(
-      backgroundColor: const Color(0xFF151819),
+      backgroundColor: c.elevatedCardBg,
       child: SafeArea(
         child: Column(
           children: <Widget>[
@@ -508,110 +521,47 @@ class _TodoDrawer extends ConsumerWidget {
                   Text(
                     'My Todos',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: const Color(0xFFE9E5F5),
+                          color: c.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Completed: $completedCount / $totalCount',
-                    style: const TextStyle(
-                      color: Color(0xFF6B7077),
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: c.textMuted, fontSize: 14),
                   ),
                 ],
               ),
             ),
-            const Divider(color: Color(0xFF2A2F32)),
+            Divider(color: c.border),
             Expanded(
               child: ListView(
                 children: <Widget>[
-                  ListTile(
-                    leading: const Icon(
-                      Icons.all_inbox_outlined,
-                      color: Color(0xFFD3CEE2),
-                    ),
-                    title: const Text(
-                      'All Todos',
-                      style: TextStyle(color: Color(0xFFE9E5F5)),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2F32),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '$totalCount',
-                        style: const TextStyle(
-                          color: Color(0xFFD3CEE2),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.radio_button_unchecked,
-                      color: Color(0xFFE89A4B),
-                    ),
-                    title: const Text(
-                      'To Be Done',
-                      style: TextStyle(color: Color(0xFFE9E5F5)),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2F32),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '$toBeDoneCount',
-                        style: const TextStyle(
-                          color: Color(0xFFD3CEE2),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.check_circle_outline,
-                      color: Color(0xFF4CAF50),
-                    ),
-                    title: const Text(
-                      'Completed',
-                      style: TextStyle(color: Color(0xFFE9E5F5)),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2F32),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '$completedCount',
-                        style: const TextStyle(
-                          color: Color(0xFFD3CEE2),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _drawerTile(context, c, Icons.all_inbox_outlined, c.icon, 'All Todos', totalCount),
+                  _drawerTile(context, c, Icons.radio_button_unchecked, const Color(0xFFE89A4B), 'To Be Done', toBeDoneCount),
+                  _drawerTile(context, c, Icons.check_circle_outline, const Color(0xFF4CAF50), 'Completed', completedCount),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerTile(BuildContext context, AppColors c, IconData icon, Color iconColor, String title, int count) {
+    return ListTile(
+      leading: Icon(icon, color: iconColor),
+      title: Text(title, style: TextStyle(color: c.textPrimary)),
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: c.surfaceDim,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          '$count',
+          style: TextStyle(color: c.icon, fontSize: 12),
         ),
       ),
     );

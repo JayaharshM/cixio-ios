@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/models/message.dart';
+import '../../../../core/theme/app_colors.dart';
 import 'code_block_widget.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -28,17 +29,19 @@ class _AssistantMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppColors c = AppColors.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text(
               'SMARTHUB AI',
               style: TextStyle(
-                color: Colors.white54,
+                color: c.textMuted,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.2,
@@ -49,7 +52,7 @@ class _AssistantMessageBubble extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 320),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(0xFF1E2024), // Match reference bubble color
+                color: c.assistantBubbleBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
@@ -71,6 +74,8 @@ class _UserMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppColors c = AppColors.of(context);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(64, 14, 16, 18),
       child: Align(
@@ -80,10 +85,10 @@ class _UserMessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
-              const Text(
+              Text(
                 'You',
                 style: TextStyle(
-                  color: Color(0xFFE8E4F4),
+                  color: c.textSecondary,
                   fontFamily: 'monospace',
                   fontSize: 12,
                   letterSpacing: 0,
@@ -92,15 +97,15 @@ class _UserMessageBubble extends StatelessWidget {
               const SizedBox(height: 6),
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF323638),
+                  color: c.userBubbleBg,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
                     message.content,
-                    style: const TextStyle(
-                      color: Color(0xFFF1EFF7),
+                    style: TextStyle(
+                      color: c.textPrimary,
                       fontSize: 16,
                       height: 1.45,
                       letterSpacing: 0,
@@ -123,6 +128,8 @@ class _MessageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppColors c = AppColors.of(context);
+
     if (message.content.isEmpty && message.isStreaming) {
       return const _TypingIndicator();
     }
@@ -140,8 +147,8 @@ class _MessageContent extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 2),
               child: Text(
                 part.content.trimRight(),
-                style: const TextStyle(
-                  color: Color(0xFFF1EFF7),
+                style: TextStyle(
+                  color: c.textPrimary,
                   fontSize: 16,
                   height: 1.45,
                   letterSpacing: 0,
