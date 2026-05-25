@@ -6,6 +6,7 @@ class ChatSession(BaseModel):
     id: str
     title: str
     created_at: datetime
+    is_pinned: bool = False
 
 
 class ChatMessage(BaseModel):

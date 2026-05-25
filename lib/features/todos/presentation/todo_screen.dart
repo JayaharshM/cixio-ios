@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../core/models/todo.dart';
 import '../providers/todo_provider.dart';
@@ -17,6 +18,15 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
@@ -119,52 +129,25 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: const Color(0xFF101415),
       drawer: _TodoDrawer(),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[
-              Color(0xFF101415),
-              Color(0xFF070A12),
-            ],
-          ),
-        ),
-        child: Column(
+      body: Column(
           children: <Widget>[
             _TodoHeader(
               onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Color(0xFFE9E5F5)),
-                onChanged: (value) {
-                  setState(() {});
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search todos',
-                  hintStyle: const TextStyle(color: Color(0xFF6B7077)),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF6B7077),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF2A2F32)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF2A2F32)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF3F484D)),
-                  ),
-                ),
-              ),
+              isSearching: _isSearching,
+              searchController: _searchController,
+              onSearchChanged: (value) {
+                setState(() {});
+              },
+              onSearchToggle: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchController.clear();
+                  }
+                });
+              },
             ),
             Expanded(
               child: state.isLoading && state.todos.isEmpty
@@ -192,12 +175,23 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
                                 ),
                               ],
                             )
-                          : ListView.builder(
-                              controller: _scrollController,
+                          : ReorderableListView.builder(
+                              scrollController: _scrollController,
                               padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
                               itemCount: filteredTodos.length,
+                              onReorder: (int oldIndex, int newIndex) {
+                                if (_searchController.text.isNotEmpty) return;
+                                ref.read(todoProvider.notifier).reorderTodos(oldIndex, newIndex);
+                              },
+                              proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: child,
+                                );
+                              },
                               itemBuilder: (context, index) {
                                 return _TodoItem(
+                                  key: ValueKey(filteredTodos[index].id),
                                   todo: filteredTodos[index],
                                 );
                               },
@@ -217,7 +211,6 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
               ),
           ],
         ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTodoDialog,
         backgroundColor: const Color(0xFFD9D4FF),
@@ -231,9 +224,52 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
 }
 
 class _TodoHeader extends StatelessWidget {
-  const _TodoHeader({required this.onMenuTap});
+  const _TodoHeader({
+    required this.onMenuTap,
+    required this.isSearching,
+    required this.searchController,
+    required this.onSearchToggle,
+    this.onSearchChanged,
+  });
 
   final VoidCallback onMenuTap;
+  final bool isSearching;
+  final TextEditingController searchController;
+  final VoidCallback onSearchToggle;
+  final ValueChanged<String>? onSearchChanged;
+
+  Widget _buildFloatingButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    Color? color,
+  }) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: color ?? const Color(0xFF2A2D32),
+        shape: BoxShape.circle,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          onTap: onTap,
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -241,124 +277,205 @@ class _TodoHeader extends StatelessWidget {
       bottom: false,
       child: Container(
         height: 66,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: const BoxDecoration(
-          color: Color(0xFF151819),
-          border: Border(
-            bottom: BorderSide(color: Color(0xFF2A2F32)),
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            GestureDetector(
-              onTap: onMenuTap,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF2B3033)),
-                ),
-                child: const Icon(
-                  Icons.checklist_outlined,
-                  color: Color(0xFFD9D4FF),
-                  size: 19,
-                ),
+        padding: EdgeInsets.symmetric(horizontal: isSearching ? 0 : 16),
+        child: isSearching
+            ? Row(
+                children: [
+                  _buildFloatingButton(
+                    icon: Icons.arrow_back,
+                    onTap: onSearchToggle,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2D32),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: TextField(
+                        controller: searchController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        autofocus: true,
+                        onChanged: onSearchChanged,
+                        decoration: const InputDecoration(
+                          hintText: 'Search todos...',
+                          hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: onMenuTap,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF2B3033)),
+                      ),
+                      child: const Icon(
+                        Icons.checklist_outlined,
+                        color: Color(0xFFD9D4FF),
+                        size: 19,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'My Todos',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(0xFFE9E5F5),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                  _buildFloatingButton(
+                    icon: Icons.search,
+                    onTap: onSearchToggle,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'My Todos',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Color(0xFFE9E5F5),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
 class _TodoItem extends ConsumerWidget {
-  const _TodoItem({required this.todo});
+  const _TodoItem({super.key, required this.todo});
 
   final Todo todo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color:
-            todo.completed ? const Color(0xFF0F1213) : const Color(0xFF1A1F21),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: todo.completed
-              ? const Color(0xFF2A2F32)
-              : const Color(0xFF2A2F32),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Slidable(
+        key: Key(todo.id),
+        startActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.22,
+          children: [
+            CustomSlidableAction(
+              onPressed: (context) {
+                ref.read(todoProvider.notifier).toggleTodoPin(id: todo.id);
+              },
+              backgroundColor: Colors.transparent,
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: todo.isPinned ? const Color(0xFF6B7077) : Colors.indigoAccent.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  todo.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
-      ),
-      child: ListTile(
-        leading: Checkbox(
-          value: todo.completed,
-          onChanged: (value) {
-            ref.read(todoProvider.notifier).toggleTodoComplete(id: todo.id);
-          },
-          fillColor: MaterialStateProperty.all(
-            todo.completed ? const Color(0xFF4CAF50) : const Color(0xFF2A2F32),
-          ),
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.22,
+          children: [
+            CustomSlidableAction(
+              onPressed: (context) {
+                ref.read(todoProvider.notifier).deleteTodo(id: todo.id);
+              },
+              backgroundColor: Colors.transparent,
+              child: Container(
+                margin: const EdgeInsets.only(left: 8),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
-        title: Text(
-          todo.title,
-          style: TextStyle(
-            color: todo.completed
-                ? const Color(0xFF6B7077)
-                : const Color(0xFFE9E5F5),
-            decoration: todo.completed ? TextDecoration.lineThrough : null,
-            fontSize: 14,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            color: todo.completed ? const Color(0xFF0F1213) : const Color(0xFF1E2024),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-        subtitle: (todo.description != null && todo.description!.isNotEmpty) || todo.dueDate != null
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (todo.description != null && todo.description!.isNotEmpty)
-                    Text(
-                      todo.description!,
-                      style: TextStyle(
-                        color: todo.completed ? const Color(0xFF6B7077) : const Color(0xFFA3A7AA),
-                        decoration: todo.completed ? TextDecoration.lineThrough : null,
-                        fontSize: 13,
-                      ),
-                    ),
-                  if (todo.dueDate != null)
-                    Text(
-                      'Due: ${_formatDate(todo.dueDate!)}',
-                      style: const TextStyle(
-                        color: Color(0xFF6B7077),
-                        fontSize: 12,
-                      ),
-                    ),
-                ],
-              )
-            : null,
-        trailing: IconButton(
-          icon: const Icon(
-            Icons.delete_outline,
-            color: Color(0xFFE84B4B),
-            size: 20,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            leading: Checkbox(
+              value: todo.completed,
+              onChanged: (value) {
+                ref.read(todoProvider.notifier).toggleTodoComplete(id: todo.id);
+              },
+              fillColor: WidgetStateProperty.all(
+                todo.completed ? const Color(0xFF4CAF50) : const Color(0xFF2A2F32),
+              ),
+            ),
+            title: Text(
+              todo.title,
+              style: TextStyle(
+                color: todo.completed
+                    ? const Color(0xFF6B7077)
+                    : const Color(0xFFE9E5F5),
+                decoration: todo.completed ? TextDecoration.lineThrough : null,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: (todo.description != null && todo.description!.isNotEmpty) || todo.dueDate != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      if (todo.description != null && todo.description!.isNotEmpty)
+                        Text(
+                          todo.description!,
+                          style: TextStyle(
+                            color: todo.completed ? const Color(0xFF6B7077) : const Color(0xFFA3A7AA),
+                            decoration: todo.completed ? TextDecoration.lineThrough : null,
+                            fontSize: 13,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (todo.dueDate != null)
+                        Text(
+                          'Due: ${_formatDate(todo.dueDate!)}',
+                          style: const TextStyle(
+                            color: Color(0xFF6B7077),
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  )
+                : null,
+            trailing: todo.isPinned
+                ? Icon(
+                    Icons.push_pin,
+                    color: Colors.indigoAccent.shade200,
+                    size: 20,
+                  )
+                : null,
           ),
-          onPressed: () {
-            ref.read(todoProvider.notifier).deleteTodo(id: todo.id);
-          },
         ),
       ),
     );

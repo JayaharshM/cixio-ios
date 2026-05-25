@@ -37,17 +37,10 @@ class FloatingGlassNavBar extends ConsumerWidget {
     final double bottomInset = MediaQuery.paddingOf(context).bottom;
     final double safeBottomPadding = bottomInset > 0 ? 6 : 0;
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Color(0xFF151819),
-        border: Border(
-          top: BorderSide(color: Color(0xFF3A3E41), width: 1),
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: safeBottomPadding),
-        child: SizedBox(
-          height: 64,
+    return Padding(
+      padding: EdgeInsets.only(bottom: safeBottomPadding),
+      child: SizedBox(
+        height: 64,
           child: Row(
             children: <Widget>[
               for (int index = 0; index < _items.length; index++)
@@ -64,8 +57,7 @@ class FloatingGlassNavBar extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -92,6 +84,9 @@ class _NavBarItemButton extends StatelessWidget {
       child: Tooltip(
         message: item.label,
         child: InkWell(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
           onTap: onTap,
           child: SizedBox.expand(
             child: Column(

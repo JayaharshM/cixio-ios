@@ -17,10 +17,21 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -57,37 +68,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      drawer: _ChatDrawer(state: state),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(color: Color(0xFF101415)),
-        child: Column(
-          children: <Widget>[
-            _ChatHeader(
+      backgroundColor: const Color(0xFF101415),
+      body: Column(
+        children: <Widget>[
+          _ChatHeader(
               state: state,
-              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+              isSearching: _isSearching,
+              searchController: _searchController,
+              onSearchToggle: () {
+                setState(() {
+                  _isSearching = !_isSearching;
+                  if (!_isSearching) {
+                    _searchController.clear();
+                  }
+                });
+              },
+              onBackTap: () {
+                setState(() {
+                  _isSearching = false;
+                  _searchController.clear();
+                });
+                ref.read(chatProvider.notifier).clearActiveSession();
+              },
             ),
             Expanded(
-              child: state.isLoading && state.messages.isEmpty
+              child: state.isLoading && state.messages.isEmpty && state.activeSession != null
                   ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: () {
-                        final ChatSession? session = state.activeSession;
-                        if (session == null) {
-                          return ref.read(chatProvider.notifier).initialize();
-                        }
-                        return ref
-                            .read(chatProvider.notifier)
-                            .selectSession(session);
-                      },
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
-                        itemCount: state.messages.length,
-                        itemBuilder: (context, index) {
-                          return MessageBubble(message: state.messages[index]);
-                        },
-                      ),
-                    ),
+                  : state.activeSession == null
+                      ? _ChatSessionsList(
+                          state: state,
+                          searchQuery: _searchController.text,
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () {
+                            final ChatSession? session = state.activeSession;
+                            if (session == null) {
+                              return ref.read(chatProvider.notifier).initialize();
+                            }
+                            return ref
+                                .read(chatProvider.notifier)
+                                .selectSession(session);
+                          },
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
+                            itemCount: state.messages.length,
+                            itemBuilder: (context, index) {
+                              return MessageBubble(message: state.messages[index]);
+                            },
+                          ),
+                        ),
             ),
             if (state.errorMessage != null)
               Padding(
@@ -98,14 +128,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-            ChatInputBar(
-              enabled: !state.isStreaming && state.activeSession != null,
-              onSubmitted: (value) {
-                ref.read(chatProvider.notifier).sendMessage(value);
-              },
-            ),
-          ],
-        ),
+            if (state.activeSession != null)
+              ChatInputBar(
+                enabled: !state.isStreaming && state.activeSession != null,
+                onSubmitted: (value) {
+                  ref.read(chatProvider.notifier).sendMessage(value);
+                },
+              ),
+        ],
       ),
     );
   }
@@ -114,11 +144,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 class _ChatHeader extends ConsumerWidget {
   const _ChatHeader({
     required this.state,
-    required this.onMenuTap,
+    required this.onBackTap,
+    required this.isSearching,
+    required this.searchController,
+    required this.onSearchToggle,
   });
 
   final ChatState state;
-  final VoidCallback onMenuTap;
+  final VoidCallback onBackTap;
+  final bool isSearching;
+  final TextEditingController searchController;
+  final VoidCallback onSearchToggle;
+
+  Widget _buildFloatingButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    Color? color,
+  }) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: color ?? const Color(0xFF2A2D32),
+        shape: BoxShape.circle,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          onTap: onTap,
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -127,44 +196,130 @@ class _ChatHeader extends ConsumerWidget {
       child: Container(
         height: 66,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: const BoxDecoration(
-          color: Color(0xFF151819),
-          border: Border(
-            bottom: BorderSide(color: Color(0xFF2A2F32)),
-          ),
-        ),
-        child: Row(
-          children: <Widget>[
-            GestureDetector(
-              onTap: onMenuTap,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2D32), // Dark grey square
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.menu,
-                  color: Colors.white,
-                  size: 20,
-                ),
+        child: isSearching && state.activeSession == null
+            ? Row(
+                children: [
+                  _buildFloatingButton(
+                    icon: Icons.arrow_back,
+                    onTap: onSearchToggle,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2D32),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: TextField(
+                        controller: searchController,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Search chats...',
+                          hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: <Widget>[
+                  if (state.activeSession != null) ...[
+              _buildFloatingButton(
+                icon: Icons.arrow_back,
+                onTap: onBackTap,
               ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'SmartHub',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Color(0xFFE9E5F5),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    hoverColor: Colors.transparent,
+                  ),
+                  child: PopupMenuButton<bool>(
+                    offset: const Offset(0, 40),
+                    color: const Color(0xFF2A2D32),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  initialValue: state.isRagEnabled,
+                  onSelected: (bool value) {
+                    ref.read(chatProvider.notifier).setRagEnabled(value);
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<bool>>[
+                    PopupMenuItem<bool>(
+                      value: true,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check,
+                            color: state.isRagEnabled ? Colors.indigoAccent.shade200 : Colors.transparent,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('RAG On', style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<bool>(
+                      value: false,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check,
+                            color: !state.isRagEnabled ? Colors.indigoAccent.shade200 : Colors.transparent,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('RAG Off', style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'SmartHub',
+                        style: TextStyle(
+                          color: Color(0xFFE9E5F5),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withValues(alpha: 0.5), size: 24),
+                    ],
+                  ),
+                ), // Close PopupMenuButton
+                ), // Close Theme
+              ), // Close Align
+            ), // Close Expanded
+            if (state.activeSession == null) ...[
+              _buildFloatingButton(
+                icon: Icons.search,
+                onTap: onSearchToggle,
               ),
-            ),
+              const SizedBox(width: 12),
+              _buildFloatingButton(
+                icon: Icons.add,
+                color: Colors.indigoAccent.shade200,
+                onTap: state.isStreaming
+                    ? null
+                    : () {
+                        ref.read(chatProvider.notifier).createNewSession();
+                      },
+              ),
+            ],
           ],
         ),
       ),
@@ -172,18 +327,18 @@ class _ChatHeader extends ConsumerWidget {
   }
 }
 
-class _ChatDrawer extends ConsumerWidget {
-  const _ChatDrawer({required this.state});
+class _ChatSessionsList extends ConsumerWidget {
+  const _ChatSessionsList({
+    required this.state,
+    required this.searchQuery,
+  });
 
   final ChatState state;
-
-  String _getMonth(int month) {
-    const List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[month - 1];
-  }
+  final String searchQuery;
 
   Map<String, List<ChatSession>> _groupSessions(List<ChatSession> sessions) {
     final Map<String, List<ChatSession>> grouped = {
+      'PINNED': [],
       'TODAY': [],
       'YESTERDAY': [],
       'LAST WEEK': [],
@@ -195,10 +350,16 @@ class _ChatDrawer extends ConsumerWidget {
     final DateTime lastWeek = today.subtract(const Duration(days: 7));
 
     for (final session in sessions) {
+      if (searchQuery.isNotEmpty && !session.title.toLowerCase().contains(searchQuery.toLowerCase())) {
+        continue;
+      }
+
       final DateTime sessionDate = session.createdAt.toLocal();
       final DateTime dateOnly = DateTime(sessionDate.year, sessionDate.month, sessionDate.day);
 
-      if (dateOnly == today) {
+      if (session.isPinned) {
+        grouped['PINNED']!.add(session);
+      } else if (dateOnly == today) {
         grouped['TODAY']!.add(session);
       } else if (dateOnly == yesterday) {
         grouped['YESTERDAY']!.add(session);
@@ -217,64 +378,8 @@ class _ChatDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final Map<String, List<ChatSession>> groupedSessions = _groupSessions(state.sessions);
 
-    return Drawer(
-      backgroundColor: const Color(0xFF151819),
-      child: SafeArea(
-        child: Column(
+    return Column(
           children: <Widget>[
-            // Search + New Chat Button
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search conversations...',
-                        hintStyle: const TextStyle(color: Color(0xFF6B7077)),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Color(0xFF6B7077),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF2A2F32)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF2A2F32)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF3F484D)),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF1E2024),
-                      ),
-                      style: const TextStyle(color: Color(0xFFE9E5F5)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.indigoAccent.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: state.isStreaming
-                          ? null
-                          : () {
-                              ref.read(chatProvider.notifier).createNewSession();
-                              Navigator.pop(context);
-                            },
-                      icon: const Icon(Icons.add, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
             // Sessions List
             Expanded(
               child: state.sessions.isEmpty
@@ -311,6 +416,30 @@ class _ChatDrawer extends ConsumerWidget {
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: Slidable(
                                   key: Key(session.id),
+                                  startActionPane: ActionPane(
+                                    motion: const ScrollMotion(),
+                                    extentRatio: 0.22,
+                                    children: [
+                                      CustomSlidableAction(
+                                        onPressed: (context) {
+                                          ref.read(chatProvider.notifier).togglePinSession(session.id);
+                                        },
+                                        backgroundColor: Colors.transparent,
+                                        child: Container(
+                                          margin: const EdgeInsets.only(right: 8),
+                                          decoration: BoxDecoration(
+                                            color: session.isPinned ? const Color(0xFF6B7077) : Colors.indigoAccent.shade200,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Icon(
+                                            session.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   endActionPane: ActionPane(
                                     motion: const ScrollMotion(),
                                     extentRatio: 0.22,
@@ -344,7 +473,6 @@ class _ChatDrawer extends ConsumerWidget {
                                     child: InkWell(
                                       onTap: () {
                                         ref.read(chatProvider.notifier).selectSession(session);
-                                        Navigator.pop(context);
                                       },
                                       child: Row(
                                         children: [
@@ -402,8 +530,6 @@ class _ChatDrawer extends ConsumerWidget {
                     ),
             ),
           ],
-        ),
-      ),
-    );
+        );
   }
 }

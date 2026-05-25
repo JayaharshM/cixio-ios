@@ -26,6 +26,10 @@ class ChatRepository {
     return _apiService.deleteSession(id);
   }
 
+  Future<ChatSession> togglePinSession(String id) {
+    return _apiService.togglePinSession(id);
+  }
+
   Future<List<Message>> getMessages(String sessionId) {
     return _apiService.getMessages(sessionId);
   }

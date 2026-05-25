@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/chat/providers/chat_provider.dart';
 import '../../shared/providers/tab_navigation_provider.dart';
 import '../../shared/widgets/floating_glass_nav_bar.dart';
 
@@ -27,9 +28,16 @@ class AppTabShell extends ConsumerWidget {
       });
     }
 
+    bool hideNavBar = false;
+    if (routeIndex == 0) {
+      final chatState = ref.watch(chatProvider);
+      hideNavBar = chatState.activeSession != null;
+    }
+
     return Scaffold(
+      backgroundColor: const Color(0xFF101415),
       body: child,
-      bottomNavigationBar: const FloatingGlassNavBar(),
+      bottomNavigationBar: hideNavBar ? null : const FloatingGlassNavBar(),
     );
   }
 

@@ -41,4 +41,8 @@ class TodoRepository {
   Future<void> deleteTodo({required String id}) {
     return _apiService.deleteTodo(id: id);
   }
+
+  Future<Todo> toggleTodoPin({required String id}) {
+    return _apiService.toggleTodoPin(id: id);
+  }
 }

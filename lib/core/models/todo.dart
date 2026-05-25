@@ -6,6 +6,7 @@ class Todo {
     required this.dueDate,
     required this.completed,
     required this.createdAt,
+    this.isPinned = false,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class Todo {
   final DateTime? dueDate;
   final bool completed;
   final DateTime createdAt;
+  final bool isPinned;
 
   factory Todo.fromJson(Map<String, dynamic> json) {
     return Todo(
@@ -25,6 +27,7 @@ class Todo {
           : null,
       completed: json['completed'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
+      isPinned: json['is_pinned'] as bool? ?? false,
     );
   }
 
@@ -35,5 +38,6 @@ class Todo {
         'due_date': dueDate?.toIso8601String(),
         'completed': completed,
         'created_at': createdAt.toIso8601String(),
+        'is_pinned': isPinned,
       };
 }

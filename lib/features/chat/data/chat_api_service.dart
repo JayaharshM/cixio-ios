@@ -44,6 +44,13 @@ class ChatApiService {
     await _dio.delete<void>('/chat/sessions/$id');
   }
 
+  Future<ChatSession> togglePinSession(String id) async {
+    final Response<Object?> response = await _dio.post<Object?>(
+      '/chat/sessions/$id/toggle_pin',
+    );
+    return ChatSession.fromJson(_asMap(response.data));
+  }
+
   Future<List<Message>> getMessages(String sessionId) async {
     final Response<Object?> response = await _dio.get<Object?>(
       '/chat/sessions/$sessionId/messages',

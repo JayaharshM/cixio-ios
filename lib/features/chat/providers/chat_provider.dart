@@ -17,6 +17,7 @@ class ChatState {
     this.isLoading = false,
     this.isStreaming = false,
     this.errorMessage,
+    this.isRagEnabled = true,
   });
 
   final List<ChatSession> sessions;
@@ -25,6 +26,7 @@ class ChatState {
   final bool isLoading;
   final bool isStreaming;
   final String? errorMessage;
+  final bool isRagEnabled;
 
   ChatState copyWith({
     List<ChatSession>? sessions,
@@ -35,6 +37,7 @@ class ChatState {
     bool? isStreaming,
     String? errorMessage,
     bool clearError = false,
+    bool? isRagEnabled,
   }) {
     return ChatState(
       sessions: sessions ?? this.sessions,
@@ -44,6 +47,7 @@ class ChatState {
       isLoading: isLoading ?? this.isLoading,
       isStreaming: isStreaming ?? this.isStreaming,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      isRagEnabled: isRagEnabled ?? this.isRagEnabled,
     );
   }
 }
@@ -64,22 +68,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       List<ChatSession> sessions = await _repository.getSessions();
-      ChatSession activeSession;
-
-      if (sessions.isEmpty) {
-        activeSession = await _repository.createSession();
-        sessions = await _repository.getSessions();
-      } else {
-        activeSession = sessions.first;
-      }
-
-      final List<Message> messages =
-          await _repository.getMessages(activeSession.id);
 
       state = state.copyWith(
         sessions: sessions,
-        activeSession: activeSession,
-        messages: messages,
+        clearActiveSession: true,
+        messages: const <Message>[],
         isLoading: false,
         clearError: true,
       );
@@ -144,34 +137,44 @@ class ChatNotifier extends StateNotifier<ChatState> {
       List<ChatSession> sessions = await _repository.getSessions();
 
       if (sessions.isEmpty) {
-        final ChatSession session = await _repository.createSession();
-        sessions = await _repository.getSessions();
-        final List<Message> messages =
-            await _repository.getMessages(session.id);
-
         state = state.copyWith(
           sessions: sessions,
-          activeSession: session,
-          messages: messages,
+          clearActiveSession: true,
+          messages: const <Message>[],
           clearError: true,
         );
         return;
       }
 
-      final ChatSession nextSession = activeSession?.id == id
-          ? sessions.first
-          : activeSession ?? sessions.first;
-      final List<Message> messages =
-          await _repository.getMessages(nextSession.id);
+      if (activeSession?.id == id) {
+        state = state.copyWith(
+          sessions: sessions,
+          clearActiveSession: true,
+          messages: const <Message>[],
+          clearError: true,
+        );
+      } else {
+        state = state.copyWith(
+          sessions: sessions,
+          clearError: true,
+        );
+      }
+    } catch (error) {
+      state = state.copyWith(errorMessage: 'Unable to delete chat session.');
+    }
+  }
 
+  Future<void> togglePinSession(String id) async {
+    try {
+      await _repository.togglePinSession(id);
+      List<ChatSession> sessions = await _repository.getSessions();
+      
       state = state.copyWith(
         sessions: sessions,
-        activeSession: nextSession,
-        messages: messages,
         clearError: true,
       );
     } catch (error) {
-      state = state.copyWith(errorMessage: 'Unable to delete chat session.');
+      state = state.copyWith(errorMessage: 'Unable to pin/unpin chat session.');
     }
   }
 
@@ -258,5 +261,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     messages[index] = replacement;
     state = state.copyWith(messages: messages);
+  }
+
+  void clearActiveSession() {
+    state = state.copyWith(
+      clearActiveSession: true,
+      messages: const <Message>[],
+      clearError: true,
+    );
+  }
+
+  void setRagEnabled(bool enabled) {
+    state = state.copyWith(isRagEnabled: enabled);
   }
 }

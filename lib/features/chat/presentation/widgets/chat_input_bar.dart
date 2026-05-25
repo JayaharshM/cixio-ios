@@ -43,7 +43,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         top: false,
         bottom: true,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          padding: const EdgeInsets.fromLTRB(0, 10, 0, 16),
           child: Container(
             decoration: BoxDecoration(
               color: const Color(0xFF15181B), // Dark input background

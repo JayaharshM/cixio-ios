@@ -83,6 +83,15 @@ class TodoApiService {
     await _dio.delete<void>('/todos/$id');
   }
 
+  Future<Todo> toggleTodoPin({
+    required String id,
+  }) async {
+    final Response<Object?> response = await _dio.post<Object?>(
+      '/todos/$id/toggle_pin',
+    );
+    return Todo.fromJson(_asMap(response.data));
+  }
+
   Map<String, dynamic> _asMap(Object? data) {
     return data is Map<String, dynamic> ? data : <String, dynamic>{};
   }

@@ -9,6 +9,7 @@ class Todo(BaseModel):
     completed: bool
     due_date: datetime | None = None
     created_at: datetime
+    is_pinned: bool = False
 
 
 class CreateTodoRequest(BaseModel):

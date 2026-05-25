@@ -56,6 +56,16 @@ async def delete_session(session_id: str) -> dict[str, bool]:
     return {"deleted": True}
 
 
+@router.post("/sessions/{session_id}/toggle_pin")
+async def toggle_pin_session(session_id: str) -> ChatSession:
+    if session_id not in sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session = sessions[session_id]
+    session.is_pinned = not session.is_pinned
+    return session
+
+
 @router.post("/sessions/{session_id}/messages")
 async def send_message(
     session_id: str,

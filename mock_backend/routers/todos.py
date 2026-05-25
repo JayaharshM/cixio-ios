@@ -66,6 +66,18 @@ async def toggle_todo_complete(todo_id: str) -> Todo:
     return todo
 
 
+@router.post("/{todo_id}/toggle_pin")
+async def toggle_todo_pin(todo_id: str) -> Todo:
+    """Pin or unpin a todo."""
+    todo = _todos.get(todo_id)
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+
+    todo.is_pinned = not todo.is_pinned
+    _todos[todo_id] = todo
+    return todo
+
+
 @router.delete("/{todo_id}")
 async def delete_todo(todo_id: str) -> dict[str, str]:
     """Delete a todo."""
