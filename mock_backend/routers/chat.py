@@ -3,6 +3,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -87,14 +88,48 @@ async def send_message(
     messages_by_session[session_id].append(user_message)
     sessions[session_id].title = _title_from_message(content)
 
-    ai_response = _mock_ai_response(content)
-
     async def event_stream():
         full_response = ""
-        for token in _tokens(ai_response):
-            full_response += token
-            yield f"data: {json.dumps({'token': token})}\n\n"
-            await asyncio.sleep(0.05)
+        
+        # We build a simple history string for the prompt
+        # Alternatively, Ollama's /api/chat endpoint is better for history, 
+        # but we use /api/generate as requested.
+        history_prompt = ""
+        for msg in messages_by_session[session_id][:-1]: # exclude the one we just added
+            history_prompt += f"{msg.role.capitalize()}: {msg.content}\n"
+        history_prompt += f"User: {content}\nAssistant: "
+
+        payload = {
+            "model": "qwen2.5:3b",
+            "prompt": history_prompt,
+            "stream": True
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                async with client.stream(
+                    "POST", 
+                    "http://192.168.1.40:11434/api/generate", 
+                    json=payload, 
+                    timeout=60.0
+                ) as response:
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        try:
+                            data = json.loads(line)
+                            token = data.get("response", "")
+                            full_response += token
+                            yield f"data: {json.dumps({'token': token})}\n\n"
+                            
+                            if data.get("done"):
+                                break
+                        except json.JSONDecodeError:
+                            pass
+        except Exception as e:
+            error_msg = f"\n[Error connecting to AI: {str(e)}]"
+            full_response += error_msg
+            yield f"data: {json.dumps({'token': error_msg})}\n\n"
 
         assistant_message = ChatMessage(
             id=str(uuid.uuid4()),
@@ -120,68 +155,3 @@ def _title_from_message(content: str) -> str:
     words = content.split()
     title = " ".join(words[:5]).strip()
     return title if title else "SmartHub workspace"
-
-
-def _tokens(response: str) -> list[str]:
-    parts = response.split(" ")
-    return [
-        f"{part} " if index < len(parts) - 1 else part
-        for index, part in enumerate(parts)
-    ]
-
-
-def _mock_ai_response(prompt: str) -> str:
-    prompt_lower = prompt.lower()
-
-    if "react" in prompt_lower or "component" in prompt_lower:
-        return (
-            "Certainly. Here is a modern React component utilizing hooks for "
-            "data fetching, loading, and error states.\n\n"
-            "```DataFetcher.tsx\n"
-            "import React, { useEffect, useState } from 'react';\n\n"
-            "type ApiState<T> = {\n"
-            "  data: T | null;\n"
-            "  loading: boolean;\n"
-            "  error: string | null;\n"
-            "};\n\n"
-            "export default function DataFetcher() {\n"
-            "  const [state, setState] = useState<ApiState<unknown>>({\n"
-            "    data: null,\n"
-            "    loading: true,\n"
-            "    error: null,\n"
-            "  });\n\n"
-            "  useEffect(() => {\n"
-            "    async function loadData() {\n"
-            "      try {\n"
-            "        const response = await fetch('/api/data');\n"
-            "        const data = await response.json();\n"
-            "        setState({ data, loading: false, error: null });\n"
-            "      } catch (error) {\n"
-            "        setState({ data: null, loading: false, error: 'Unable to load data' });\n"
-            "      }\n"
-            "    }\n\n"
-            "    loadData();\n"
-            "  }, []);\n\n"
-            "  if (state.loading) return <p>Loading...</p>;\n"
-            "  if (state.error) return <p>{state.error}</p>;\n"
-            "  return <pre>{JSON.stringify(state.data, null, 2)}</pre>;\n"
-            "}\n"
-            "```\n\n"
-            "This keeps request state localized, avoids stale updates, and makes "
-            "the loading and error branches explicit for the user."
-        )
-
-    if "plan" in prompt_lower or "workspace" in prompt_lower:
-        return (
-            "A practical next step is to split the workspace into three tracks: "
-            "implementation, verification, and polish. Start with the smallest "
-            "end-to-end workflow, validate it with one automated check, then "
-            "tighten the interaction details that users will touch repeatedly."
-        )
-
-    return (
-        "I can help with that. I would start by clarifying the intended outcome, "
-        "then identify the smallest change that proves the workflow end to end. "
-        "From there, we can iterate on edge cases, performance, and interface "
-        "polish without losing momentum."
-    )
