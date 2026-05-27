@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/todo.dart';
+import '../../../core/models/todo_section.dart';
 import '../data/todo_repository.dart';
 
 final StateNotifierProvider<TodoNotifier, TodoState> todoProvider =
@@ -10,23 +11,33 @@ final StateNotifierProvider<TodoNotifier, TodoState> todoProvider =
 
 class TodoState {
   const TodoState({
+    this.sections = const <TodoSection>[],
     this.todos = const <Todo>[],
+    this.activeSection,
     this.isLoading = false,
     this.errorMessage,
   });
 
+  final List<TodoSection> sections;
   final List<Todo> todos;
+  final TodoSection? activeSection;
   final bool isLoading;
   final String? errorMessage;
 
   TodoState copyWith({
+    List<TodoSection>? sections,
     List<Todo>? todos,
+    TodoSection? activeSection,
+    bool clearActiveSection = false,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
   }) {
     return TodoState(
+      sections: sections ?? this.sections,
       todos: todos ?? this.todos,
+      activeSection:
+          clearActiveSection ? null : activeSection ?? this.activeSection,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
@@ -48,14 +59,122 @@ class TodoNotifier extends StateNotifier<TodoState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final List<Todo> todos = await _repository.getTodos();
+      final List<TodoSection> sections = await _repository.getSections();
+      state = state.copyWith(
+        sections: sections,
+        clearActiveSection: true,
+        todos: const <Todo>[],
+        isLoading: false,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Unable to load todo sections. Is the mock backend running?',
+      );
+    }
+  }
+
+  Future<void> selectSection(TodoSection section) async {
+    if (state.activeSection?.id == section.id) {
+      return;
+    }
+
+    state = state.copyWith(
+      activeSection: section,
+      todos: const <Todo>[],
+      isLoading: true,
+      clearError: true,
+    );
+
+    try {
+      final List<Todo> todos = await _repository.getTodos(section.id);
       _setTodosAndLoading(todos, false);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Unable to load todos. Is the mock backend running?',
+        errorMessage: 'Unable to load this todo list.',
       );
     }
+  }
+
+  Future<void> createSection(String title) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final TodoSection section = await _repository.createSection(title);
+      final List<TodoSection> sections = await _repository.getSections();
+      final List<Todo> todos = await _repository.getTodos(section.id);
+
+      state = state.copyWith(
+        sections: sections,
+        activeSection: section,
+        todos: todos,
+        isLoading: false,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Unable to create a new todo list.',
+      );
+    }
+  }
+
+  Future<void> deleteSection(String id) async {
+    final TodoSection? activeSection = state.activeSection;
+
+    try {
+      await _repository.deleteSection(id);
+      List<TodoSection> sections = await _repository.getSections();
+
+      if (sections.isEmpty) {
+        state = state.copyWith(
+          sections: sections,
+          clearActiveSection: true,
+          todos: const <Todo>[],
+          clearError: true,
+        );
+        return;
+      }
+
+      if (activeSection?.id == id) {
+        state = state.copyWith(
+          sections: sections,
+          clearActiveSection: true,
+          todos: const <Todo>[],
+          clearError: true,
+        );
+      } else {
+        state = state.copyWith(
+          sections: sections,
+          clearError: true,
+        );
+      }
+    } catch (error) {
+      state = state.copyWith(errorMessage: 'Unable to delete todo list.');
+    }
+  }
+
+  Future<void> togglePinSection(String id) async {
+    try {
+      await _repository.togglePinSection(id);
+      List<TodoSection> sections = await _repository.getSections();
+      
+      state = state.copyWith(
+        sections: sections,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(errorMessage: 'Unable to pin/unpin todo list.');
+    }
+  }
+
+  void clearActiveSection() {
+    state = state.copyWith(
+      clearActiveSection: true,
+      todos: const <Todo>[],
+      clearError: true,
+    );
   }
 
   Future<void> createTodo({
@@ -63,16 +182,20 @@ class TodoNotifier extends StateNotifier<TodoState> {
     String? description,
     DateTime? dueDate,
   }) async {
+    final TodoSection? section = state.activeSection;
+    if (section == null) return;
+
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
       await _repository.createTodo(
+        sectionId: section.id,
         title: title,
         description: description,
         dueDate: dueDate,
       );
-      final List<Todo> todos = await _repository.getTodos();
-      state = state.copyWith(todos: todos, isLoading: false);
+      final List<Todo> todos = await _repository.getTodos(section.id);
+      _setTodosAndLoading(todos, false);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -123,8 +246,11 @@ class TodoNotifier extends StateNotifier<TodoState> {
   }
 
   Future<void> refreshTodos() async {
+    final TodoSection? section = state.activeSection;
+    if (section == null) return;
+
     try {
-      final List<Todo> todos = await _repository.getTodos();
+      final List<Todo> todos = await _repository.getTodos(section.id);
       _setTodosAndLoading(todos, null);
     } catch (error) {
       state = state.copyWith(
@@ -134,9 +260,12 @@ class TodoNotifier extends StateNotifier<TodoState> {
   }
 
   Future<void> toggleTodoPin({required String id}) async {
+    final TodoSection? section = state.activeSection;
+    if (section == null) return;
+
     try {
       await _repository.toggleTodoPin(id: id);
-      final List<Todo> todos = await _repository.getTodos();
+      final List<Todo> todos = await _repository.getTodos(section.id);
       _setTodosAndLoading(todos, null);
     } catch (error) {
       state = state.copyWith(

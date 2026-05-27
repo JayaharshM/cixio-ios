@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../router/app_router.dart';
 import '../../shared/providers/theme_provider.dart';
 import '../auth/auth_api.dart';
+import 'profile_image_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,9 +21,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     context.goNamed(AppRoute.login.name);
   }
 
+  void _showImageOptions(BuildContext context) {
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final Color bottomSheetBg = dark ? const Color(0xFF161A1D) : Colors.white;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: bottomSheetBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(profileImageProvider.notifier).pickImage();
+                },
+              ),
+              if (ref.read(profileImageProvider) != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    ref.read(profileImageProvider.notifier).deleteImage();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeMode currentMode = ref.watch(themeModeProvider);
+    final String? profileImagePath = ref.watch(profileImageProvider);
     final bool isDark = currentMode == ThemeMode.dark;
     final ColorScheme cs = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -48,34 +92,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: <Widget>[
               // ── Avatar + name + email + badges ──────────────────
               const SizedBox(height: 32),
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: cs.primary.withValues(alpha: 0.4),
-                        width: 2.5,
-                      ),
-                      image: const DecorationImage(
-                        image: NetworkImage('https://i.pravatar.cc/200?img=47'),
-                        fit: BoxFit.cover,
+              GestureDetector(
+                onTap: () => _showImageOptions(context),
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: cs.primary.withValues(alpha: 0.4),
+                          width: 2.5,
+                        ),
+                        image: DecorationImage(
+                          image: profileImagePath != null 
+                              ? FileImage(File(profileImagePath)) as ImageProvider
+                              : const NetworkImage('https://i.pravatar.cc/200?img=47'),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.indigoAccent.shade200,
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.indigoAccent.shade200,
+                      ),
+                      child: const Icon(Icons.edit, size: 14, color: Colors.white),
                     ),
-                    child: const Icon(Icons.edit, size: 14, color: Colors.white),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
               ref.watch(userProvider).when(

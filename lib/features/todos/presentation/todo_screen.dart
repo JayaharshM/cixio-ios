@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../core/models/todo.dart';
+import '../../../core/models/todo_section.dart';
 import '../../../core/theme/app_colors.dart';
 import '../providers/todo_provider.dart';
 
@@ -36,6 +37,60 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
     _descriptionController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _showAddSectionDialog() {
+    _titleController.clear();
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        final AppColors c = AppColors.of(context);
+        return AlertDialog(
+          backgroundColor: c.dialogBg,
+          title: Text(
+            'New Todo List',
+            style: TextStyle(color: c.textPrimary),
+          ),
+          content: TextField(
+            controller: _titleController,
+            style: TextStyle(color: c.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter list name',
+              hintStyle: TextStyle(color: c.textMuted),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: c.border),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: c.accent),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: c.icon),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_titleController.text.isNotEmpty) {
+                  ref.read(todoProvider.notifier).createSection(_titleController.text);
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(
+                'Create',
+                style: TextStyle(color: c.accent),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showAddTodoDialog() {
@@ -122,136 +177,98 @@ class _TodoScreenState extends ConsumerState<TodoScreen> {
   Widget build(BuildContext context) {
     final AppColors c = AppColors.of(context);
     final TodoState state = ref.watch(todoProvider);
-    final List<Todo> filteredTodos = _searchController.text.isEmpty
-        ? state.todos
-        : state.todos
-            .where((todo) => todo.title
-                .toLowerCase()
-                .contains(_searchController.text.toLowerCase()))
-            .toList();
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: c.scaffoldBg,
-      drawer: const _TodoDrawer(),
-      body: Column(
-          children: <Widget>[
-            _TodoHeader(
-              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
-              isSearching: _isSearching,
-              searchController: _searchController,
-              onSearchChanged: (value) {
-                setState(() {});
-              },
-              onSearchToggle: () {
-                setState(() {
-                  _isSearching = !_isSearching;
-                  if (!_isSearching) {
-                    _searchController.clear();
-                  }
-                });
-              },
-            ),
-            Expanded(
-              child: state.isLoading && state.todos.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: () =>
-                          ref.read(todoProvider.notifier).refreshTodos(),
-                      child: filteredTodos.isEmpty
-                          ? ListView(
-                              controller: _scrollController,
-                              children: <Widget>[
-                                Padding(
-                                  padding: const EdgeInsets.all(32),
-                                  child: Center(
-                                    child: Text(
-                                      'No todos yet',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge
-                                          ?.copyWith(color: c.textMuted),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : ReorderableListView.builder(
-                              scrollController: _scrollController,
-                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
-                              itemCount: filteredTodos.length,
-                              onReorder: (int oldIndex, int newIndex) {
-                                if (_searchController.text.isNotEmpty) return;
-                                ref.read(todoProvider.notifier).reorderTodos(oldIndex, newIndex);
-                              },
-                              proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: child,
-                                );
-                              },
-                              itemBuilder: (context, index) {
-                                return _TodoItem(
-                                  key: ValueKey(filteredTodos[index].id),
-                                  todo: filteredTodos[index],
-                                );
-                              },
-                            ),
-                    ),
-            ),
-            if (state.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  state.errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                ),
-              ),
-          ],
-        ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 24.0),
         child: FloatingActionButton(
-          onPressed: _showAddTodoDialog,
+          onPressed: state.activeSection == null ? _showAddSectionDialog : _showAddTodoDialog,
           backgroundColor: c.accent,
           shape: const CircleBorder(),
           child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
+      body: Column(
+        children: <Widget>[
+          _TodoHeader(
+            state: state,
+            isSearching: _isSearching,
+            searchController: _searchController,
+            onSearchToggle: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchController.clear();
+                }
+              });
+            },
+            onBackTap: () {
+              setState(() {
+                _isSearching = false;
+                _searchController.clear();
+              });
+              ref.read(todoProvider.notifier).clearActiveSection();
+            },
+          ),
+          Expanded(
+            child: state.isLoading && state.sections.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : state.activeSection == null
+                    ? _TodoSectionsList(
+                        state: state,
+                        searchQuery: _searchController.text,
+                      )
+                    : _TodoItemsList(
+                        state: state,
+                        searchQuery: _searchController.text,
+                        scrollController: _scrollController,
+                      ),
+          ),
+          if (state.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                state.errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _TodoHeader extends StatelessWidget {
+class _TodoHeader extends ConsumerWidget {
   const _TodoHeader({
-    required this.onMenuTap,
+    required this.state,
+    required this.onBackTap,
     required this.isSearching,
     required this.searchController,
     required this.onSearchToggle,
-    this.onSearchChanged,
   });
 
-  final VoidCallback onMenuTap;
+  final TodoState state;
+  final VoidCallback onBackTap;
   final bool isSearching;
   final TextEditingController searchController;
   final VoidCallback onSearchToggle;
-  final ValueChanged<String>? onSearchChanged;
 
   Widget _buildFloatingButton(BuildContext context, {
     required IconData icon,
     required VoidCallback? onTap,
     Color? color,
   }) {
-    final AppColors c = AppColors.of(context);
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: color ?? c.surfaceDim,
+        color: color ?? AppColors.of(context).surfaceDim,
         shape: BoxShape.circle,
         boxShadow: <BoxShadow>[
           BoxShadow(
@@ -267,23 +284,21 @@ class _TodoHeader extends StatelessWidget {
           customBorder: const CircleBorder(),
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
           onTap: onTap,
-          child: Icon(icon, color: c.textPrimary, size: 24),
+          child: Icon(icon, color: AppColors.of(context).textPrimary, size: 24),
         ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final AppColors c = AppColors.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
     return SafeArea(
       bottom: false,
       child: Container(
         height: 66,
-        padding: EdgeInsets.symmetric(horizontal: isSearching ? 0 : 16),
-        child: isSearching
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: isSearching && state.activeSection == null
             ? Row(
                 children: [
                   _buildFloatingButton(context,
@@ -295,21 +310,20 @@ class _TodoHeader extends StatelessWidget {
                     child: Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: c.surfaceDim,
+                        color: AppColors.of(context).surfaceDim,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: TextField(
                         controller: searchController,
-                        style: TextStyle(color: c.textPrimary, fontSize: 14),
+                        style: TextStyle(color: AppColors.of(context).textPrimary, fontSize: 14),
                         autofocus: true,
-                        onChanged: onSearchChanged,
                         textAlignVertical: TextAlignVertical.center,
                         decoration: InputDecoration(
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                          hintText: 'Search todos...',
-                          hintStyle: TextStyle(color: c.textMuted, fontSize: 14),
+                          hintText: 'Search lists...',
+                          hintStyle: TextStyle(color: AppColors.of(context).textMuted, fontSize: 14),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -322,43 +336,227 @@ class _TodoHeader extends StatelessWidget {
               )
             : Row(
                 children: <Widget>[
-                  GestureDetector(
-                    onTap: onMenuTap,
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: c.border),
-                      ),
-                      child: Icon(
-                        Icons.checklist_outlined,
-                        color: c.accent,
-                        size: 19,
-                      ),
+                  if (state.activeSection != null) ...[
+                    _buildFloatingButton(context,
+                      icon: Icons.arrow_back,
+                      onTap: onBackTap,
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
                   Expanded(
                     child: Text(
-                      'My Todos',
+                      state.activeSection?.title ?? 'Todo Lists',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: c.textPrimary,
+                        color: AppColors.of(context).textPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
                   ),
-                  _buildFloatingButton(context,
-                    icon: Icons.search,
-                    onTap: onSearchToggle,
-                  ),
+                  if (state.activeSection == null) ...[
+                    _buildFloatingButton(context,
+                      icon: Icons.search,
+                      onTap: onSearchToggle,
+                    ),
+                  ],
                 ],
               ),
       ),
+    );
+  }
+}
+
+class _TodoSectionsList extends ConsumerWidget {
+  const _TodoSectionsList({
+    required this.state,
+    required this.searchQuery,
+  });
+
+  final TodoState state;
+  final String searchQuery;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<TodoSection> filteredSections = searchQuery.isEmpty
+        ? state.sections
+        : state.sections
+            .where((s) => s.title.toLowerCase().contains(searchQuery.toLowerCase()))
+            .toList();
+
+    if (filteredSections.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No todo lists yet',
+          style: TextStyle(color: Color(0xFF6B7077)),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      itemCount: filteredSections.length,
+      itemBuilder: (context, index) {
+        final TodoSection section = filteredSections[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Slidable(
+            key: Key(section.id),
+            startActionPane: ActionPane(
+              motion: const ScrollMotion(),
+              extentRatio: 0.22,
+              children: [
+                CustomSlidableAction(
+                  onPressed: (context) {
+                    ref.read(todoProvider.notifier).togglePinSection(section.id);
+                  },
+                  backgroundColor: Colors.transparent,
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: section.isPinned ? const Color(0xFF6B7077) : AppColors.of(context).accent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      section.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            endActionPane: ActionPane(
+              motion: const ScrollMotion(),
+              extentRatio: 0.22,
+              children: [
+                CustomSlidableAction(
+                  onPressed: (context) {
+                    ref.read(todoProvider.notifier).deleteSection(section.id);
+                  },
+                  backgroundColor: Colors.transparent,
+                  child: Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.of(context).cardBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () {
+                  ref.read(todoProvider.notifier).selectSection(section);
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.list_alt_rounded,
+                      color: AppColors.of(context).icon,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        section.title,
+                        style: TextStyle(
+                          color: AppColors.of(context).textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (section.isPinned)
+                      Icon(
+                        Icons.push_pin,
+                        color: AppColors.of(context).accent,
+                        size: 20,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TodoItemsList extends ConsumerWidget {
+  const _TodoItemsList({
+    required this.state,
+    required this.searchQuery,
+    required this.scrollController,
+  });
+
+  final TodoState state;
+  final String searchQuery;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<Todo> filteredTodos = searchQuery.isEmpty
+        ? state.todos
+        : state.todos
+            .where((todo) => todo.title.toLowerCase().contains(searchQuery.toLowerCase()))
+            .toList();
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(todoProvider.notifier).refreshTodos(),
+      child: filteredTodos.isEmpty
+          ? ListView(
+              controller: scrollController,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Center(
+                    child: Text(
+                      'No todos yet',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.of(context).textMuted),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : ReorderableListView.builder(
+              scrollController: scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              itemCount: filteredTodos.length,
+              onReorder: (int oldIndex, int newIndex) {
+                if (searchQuery.isNotEmpty) return;
+                ref.read(todoProvider.notifier).reorderTodos(oldIndex, newIndex);
+              },
+              proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                return Material(
+                  color: Colors.transparent,
+                  child: child,
+                );
+              },
+              itemBuilder: (context, index) {
+                return _TodoItem(
+                  key: ValueKey(filteredTodos[index].id),
+                  todo: filteredTodos[index],
+                );
+              },
+            ),
     );
   }
 }
@@ -493,77 +691,5 @@ class _TodoItem extends ConsumerWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
-  }
-}
-
-class _TodoDrawer extends ConsumerWidget {
-  const _TodoDrawer();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AppColors c = AppColors.of(context);
-    final TodoState state = ref.watch(todoProvider);
-    final int completedCount =
-        state.todos.where((todo) => todo.completed).length;
-    final int totalCount = state.todos.length;
-    final int toBeDoneCount = totalCount - completedCount;
-
-    return Drawer(
-      backgroundColor: c.elevatedCardBg,
-      child: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'My Todos',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: c.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Completed: $completedCount / $totalCount',
-                    style: TextStyle(color: c.textMuted, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            Divider(color: c.border),
-            Expanded(
-              child: ListView(
-                children: <Widget>[
-                  _drawerTile(context, c, Icons.all_inbox_outlined, c.icon, 'All Todos', totalCount),
-                  _drawerTile(context, c, Icons.radio_button_unchecked, const Color(0xFFE89A4B), 'To Be Done', toBeDoneCount),
-                  _drawerTile(context, c, Icons.check_circle_outline, const Color(0xFF4CAF50), 'Completed', completedCount),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _drawerTile(BuildContext context, AppColors c, IconData icon, Color iconColor, String title, int count) {
-    return ListTile(
-      leading: Icon(icon, color: iconColor),
-      title: Text(title, style: TextStyle(color: c.textPrimary)),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: c.surfaceDim,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          '$count',
-          style: TextStyle(color: c.icon, fontSize: 12),
-        ),
-      ),
-    );
   }
 }

@@ -18,6 +18,15 @@ class CreateTodoRequest(BaseModel):
     due_date: datetime | None = None
 
 
+class TodoSection(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    is_pinned: bool = False
+
+class CreateSectionRequest(BaseModel):
+    title: str
+
 class UpdateTodoRequest(BaseModel):
     title: str | None = None
     description: str | None = None
