@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/models/document.dart';
 import '../../../core/theme/app_colors.dart';
@@ -20,7 +21,13 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
   Future<void> _pickFile() async {
     final FilePickerResult? result = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: <String>['pdf', 'docx', 'txt', 'csv'],
+      allowedExtensions: <String>[
+        'pdf', 'docx', 'txt', 'csv', 
+        'xls', 'xlsx', 
+        'png', 'jpg', 'jpeg', 'gif', 'webp', 
+        'log', 
+        'yaml', 'yml'
+      ],
     );
 
     if (result != null && result.files.single.path != null) {
@@ -29,6 +36,20 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
       await ref.read(docsProvider.notifier).uploadDocument(filePath, fileName);
       if (mounted) {
         Navigator.pop(context); // Close the bottom sheet after picking a file
+      }
+    }
+  }
+
+  Future<void> _pickPhoto() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      final String filePath = image.path;
+      final String fileName = image.name;
+      await ref.read(docsProvider.notifier).uploadDocument(filePath, fileName);
+      if (mounted) {
+        Navigator.pop(context); // Close the bottom sheet after picking a photo
       }
     }
   }
@@ -156,25 +177,44 @@ class _DocsScreenState extends ConsumerState<DocsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Support for PDF, DOCX, TXT, and CSV. Max file size: 50MB.',
+                      'Support for PDF, TXT, CSV, Spreadsheets, DOCX, Images, LOG, YAML. Max file size: 50MB.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: c.textMuted, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _pickFile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: c.accent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _pickFile,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: c.accent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('BROWSE FILES'),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _pickPhoto,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: c.textPrimary,
+                              side: BorderSide(color: c.border),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('BROWSE PHOTOS'),
+                          ),
                         ),
-                      ),
-                      child: const Text('BROWSE FILES'),
+                      ],
                     ),
                   ],
                 ),
